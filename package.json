@@ -14,6 +14,7 @@
     "clsx": "^2.1.1",
     "discord.js": "^14.21.0",
     "dotenv": "^17.0.1",
+    "express": "^5.1.0",
     "kazagumo": "^3.3.0",
     "kazagumo-spotify": "^2.1.1",
     "lucide-react": "^0.525.0",
@@ -23,8 +24,7 @@
     "react-dom": "^19.0.0",
     "shoukaku": "^4.1.1",
     "sonner": "^2.0.5",
-    "tailwind-merge": "^3.3.1",
-    "zlib-sync": "^0.1.10"
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
