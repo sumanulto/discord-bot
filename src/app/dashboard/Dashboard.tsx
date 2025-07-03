@@ -2,7 +2,27 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { Play, Pause, SkipForward, Square, Volume2, Music, Users, Server, AlertCircle, Power } from "lucide-react"
+import {
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Square,
+  Volume2,
+  VolumeX,
+  Music,
+  Server,
+  AlertCircle,
+  Power,
+  RotateCcw,
+  Search,
+  Plus,
+  MoreVertical,
+  Shuffle,
+  Repeat,
+  Heart,
+  Download,
+} from "lucide-react"
 
 interface BotStatus {
   botOnline: boolean
@@ -46,19 +66,25 @@ export default function Dashboard() {
   const [selectedGuild, setSelectedGuild] = useState<string>("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>("")
-  const [activeTab, setActiveTab] = useState("player")
+  const [activeView, setActiveView] = useState("player")
   const [startingBot, setStartingBot] = useState(false)
+  const [restartingBot, setRestartingBot] = useState(false)
+  const [volume, setVolume] = useState(100)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isSeekingTimeline, setIsSeekingTimeline] = useState(false)
 
   useEffect(() => {
     fetchBotStatus()
     fetchPlayers()
 
     const interval = setInterval(() => {
-      fetchBotStatus()
-      fetchPlayers()
-    }, 3000) // Check every 3 seconds
+      if (!isSeekingTimeline) {
+        fetchBotStatus()
+        fetchPlayers()
+      }
+    }, 2000)
     return () => clearInterval(interval)
-  }, [])
+  }, [isSeekingTimeline])
 
   const fetchBotStatus = async () => {
     try {
@@ -97,7 +123,6 @@ export default function Dashboard() {
 
       if (data.success) {
         setError("")
-        // Refresh status after starting
         setTimeout(() => {
           fetchBotStatus()
           fetchPlayers()
@@ -110,6 +135,35 @@ export default function Dashboard() {
       setError("Failed to start bot")
     } finally {
       setStartingBot(false)
+    }
+  }
+
+  const stopBot = async () => {
+    try {
+      const response = await fetch("/api/bot/stop", { method: "POST" })
+      const data = await response.json()
+
+      if (data.success) {
+        setBotStatus((prev) => (prev ? { ...prev, botOnline: false } : null))
+        setPlayers([])
+        setError("")
+      }
+    } catch (error) {
+      setError("Failed to stop bot")
+    }
+  }
+
+  const restartBot = async () => {
+    setRestartingBot(true)
+    try {
+      await stopBot()
+      setTimeout(async () => {
+        await startBot()
+        setRestartingBot(false)
+      }, 2000)
+    } catch (error) {
+      setRestartingBot(false)
+      setError("Failed to restart bot")
     }
   }
 
@@ -130,14 +184,35 @@ export default function Dashboard() {
         setError(data.error || "Failed to control player")
       } else {
         setError("")
-        // Refresh players after successful action
-        setTimeout(fetchPlayers, 1000)
+        setTimeout(fetchPlayers, 500)
       }
     } catch (error) {
       console.error("Failed to control player:", error)
       setError("Failed to control player")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const seekToPosition = async (percentage: number) => {
+    if (!currentPlayer?.current) return
+
+    const newPosition = Math.floor((percentage / 100) * currentPlayer.current.duration)
+    await controlPlayer("seek", newPosition.toString())
+  }
+
+  const handleVolumeChange = (newVolume: number) => {
+    setVolume(newVolume)
+    controlPlayer("volume", newVolume.toString())
+  }
+
+  const toggleMute = () => {
+    if (isMuted) {
+      setIsMuted(false)
+      controlPlayer("volume", volume.toString())
+    } else {
+      setIsMuted(true)
+      controlPlayer("volume", "0")
     }
   }
 
@@ -148,262 +223,306 @@ export default function Dashboard() {
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
   }
 
+  const getServerName = (guildId: string) => {
+    const serverNames = {
+      [process.env.NEXT_PUBLIC_SERVER_1_ID || ""]: "Kraftamine",
+      [process.env.NEXT_PUBLIC_SERVER_2_ID || ""]: "PP'S Server",
+      [process.env.NEXT_PUBLIC_SERVER_3_ID || ""]: "Music Server",
+    }
+    return serverNames[guildId] || `Server ${guildId.slice(-4)}`
+  }
+
   const currentPlayer = players.find((p) => p.guildId === selectedGuild)
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Discord Music Bot Dashboard</h1>
-        <div className="flex items-center gap-4">
-          {!botStatus?.botOnline && (
-            <button
-              onClick={startBot}
-              disabled={startingBot}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-            >
-              <Power className="mr-2 h-4 w-4" />
-              {startingBot ? "Starting..." : "Start Bot"}
-            </button>
-          )}
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              botStatus?.botOnline
-                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-            }`}
-          >
-            {botStatus?.botOnline ? "Online" : "Offline"}
-          </span>
-        </div>
-      </div>
-
-      {error && (
-        <div className="flex items-center p-4 mb-4 text-sm text-red-800 border border-red-300 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400 dark:border-red-800">
-          <AlertCircle className="flex-shrink-0 inline w-4 h-4 mr-3" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Bot Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Server className="h-6 w-6 text-gray-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Servers</dt>
-                  <dd className="text-lg font-medium text-gray-900 dark:text-white">{botStatus?.guilds || 0}</dd>
-                </dl>
-              </div>
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <header className="bg-black border-b border-gray-800 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Music className="h-8 w-8 text-red-500" />
+              <h1 className="text-2xl font-bold">Discord Music</h1>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Users className="h-6 w-6 text-gray-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Users</dt>
-                  <dd className="text-lg font-medium text-gray-900 dark:text-white">{botStatus?.users || 0}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Music className="h-6 w-6 text-gray-400" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Active Players</dt>
-                  <dd className="text-lg font-medium text-gray-900 dark:text-white">{botStatus?.players || 0}</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div
-                  className={`h-6 w-6 rounded-full ${botStatus?.nodes.some((n) => n.connected) ? "bg-green-500" : "bg-red-500"}`}
-                />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">Lavalink Nodes</dt>
-                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    {botStatus?.nodes.filter((n) => n.connected).length || 0}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Player Selection */}
-      {players.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">Select Server</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Choose a server to control its music player</p>
-            <div className="mt-4 flex gap-2 flex-wrap">
-              {players.map((player) => (
-                <button
-                  key={player.guildId}
-                  onClick={() => setSelectedGuild(player.guildId)}
-                  className={`inline-flex items-center px-3 py-2 border text-sm leading-4 font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-                    selectedGuild === player.guildId
-                      ? "border-transparent text-white bg-blue-600 hover:bg-blue-700"
-                      : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                  }`}
-                >
-                  Server {player.guildId.slice(-4)}
-                  {player.playing && <Music className="ml-2 h-4 w-4" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Music Controls */}
-      {currentPlayer && (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+          {/* Bot Controls */}
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <button
-                onClick={() => setActiveTab("player")}
-                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "player"
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                onClick={startBot}
+                disabled={startingBot || botStatus?.botOnline}
+                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:opacity-50 rounded-full text-sm font-medium transition-colors"
+              >
+                <Power className="h-4 w-4 mr-1 inline" />
+                {startingBot ? "Starting..." : "Start"}
+              </button>
+
+              <button
+                onClick={restartBot}
+                disabled={restartingBot || !botStatus?.botOnline}
+                className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 disabled:opacity-50 rounded-full text-sm font-medium transition-colors"
+              >
+                <RotateCcw className="h-4 w-4 mr-1 inline" />
+                {restartingBot ? "Restarting..." : "Restart"}
+              </button>
+
+              <button
+                onClick={stopBot}
+                disabled={!botStatus?.botOnline}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:opacity-50 rounded-full text-sm font-medium transition-colors"
+              >
+                <Square className="h-4 w-4 mr-1 inline" />
+                Stop
+              </button>
+            </div>
+
+            <span
+              className={`px-3 py-1.5 rounded-full text-sm font-medium ${
+                botStatus?.botOnline ? "bg-green-900 text-green-300" : "bg-red-900 text-red-300"
+              }`}
+            >
+              {botStatus?.botOnline ? "Online" : "Offline"}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex h-[calc(100vh-80px)]">
+        {/* Sidebar */}
+        <aside className="w-64 bg-gray-900 border-r border-gray-800">
+          <div className="p-4">
+            <nav className="space-y-2">
+              <button
+                onClick={() => setActiveView("player")}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                  activeView === "player" ? "bg-red-600 text-white" : "text-gray-300 hover:bg-gray-800"
                 }`}
               >
+                <Music className="h-5 w-5 inline mr-3" />
                 Player
               </button>
               <button
-                onClick={() => setActiveTab("queue")}
-                className={`whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === "queue"
-                    ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300"
+                onClick={() => setActiveView("servers")}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                  activeView === "servers" ? "bg-red-600 text-white" : "text-gray-300 hover:bg-gray-800"
                 }`}
               >
-                Queue
+                <Server className="h-5 w-5 inline mr-3" />
+                Servers
               </button>
             </nav>
           </div>
 
-          <div className="p-6">
-            {activeTab === "player" && (
-              <div className="space-y-6">
+          {/* Server List */}
+          <div className="px-4 pb-4">
+            <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Active Servers</h3>
+            <div className="space-y-2">
+              {players.map((player) => (
+                <button
+                  key={player.guildId}
+                  onClick={() => setSelectedGuild(player.guildId)}
+                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                    selectedGuild === player.guildId ? "bg-red-600 text-white" : "text-gray-300 hover:bg-gray-800"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">{getServerName(player.guildId)}</span>
+                    {player.playing && (
+                      <div className="flex space-x-1">
+                        <div className="w-1 h-3 bg-red-500 rounded animate-pulse"></div>
+                        <div
+                          className="w-1 h-3 bg-red-500 rounded animate-pulse"
+                          style={{ animationDelay: "0.2s" }}
+                        ></div>
+                        <div
+                          className="w-1 h-3 bg-red-500 rounded animate-pulse"
+                          style={{ animationDelay: "0.4s" }}
+                        ></div>
+                      </div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="px-4 pb-4 border-t border-gray-800 pt-4">
+            <div className="space-y-3 text-sm text-gray-400">
+              <div className="flex justify-between">
+                <span>Servers</span>
+                <span>{botStatus?.guilds || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Users</span>
+                <span>{botStatus?.users || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Players</span>
+                <span>{botStatus?.players || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Nodes</span>
+                <span className={botStatus?.nodes.some((n) => n.connected) ? "text-green-400" : "text-red-400"}>
+                  {botStatus?.nodes.filter((n) => n.connected).length || 0}
+                </span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 flex flex-col">
+          {error && (
+            <div className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 mx-6 mt-4 rounded-lg">
+              <div className="flex items-center">
+                <AlertCircle className="h-5 w-5 mr-2" />
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+
+          {activeView === "player" && currentPlayer && (
+            <div className="flex-1 flex">
+              {/* Player Content */}
+              <div className="flex-1 p-6">
                 {currentPlayer.current ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-4">
+                  <div className="max-w-4xl mx-auto">
+                    {/* Now Playing */}
+                    <div className="flex items-start space-x-6 mb-8">
+                      <div className="relative">
                         <Image
                           src={currentPlayer.current.thumbnail || "/placeholder.svg"}
-                          alt="Track thumbnail"
-                          width={64}
-                          height={64}
-                          className="w-16 h-16 rounded-lg object-cover"
+                          alt="Album art"
+                          width={240}
+                          height={240}
+                          className="w-60 h-60 rounded-lg shadow-2xl object-cover"
                         />
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                          {currentPlayer.current.title}
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-400">{currentPlayer.current.author}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-500">
-                          Duration: {formatTime(currentPlayer.current.duration)}
-                        </p>
+                        <div className="absolute inset-0 bg-black bg-opacity-20 rounded-lg"></div>
                       </div>
-                    </div>
 
-                    {/* Progress Bar */}
-                    <div className="space-y-2">
-                      <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${(currentPlayer.position / currentPlayer.current.duration) * 100}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
-                        <span>{formatTime(currentPlayer.position)}</span>
-                        <span>{formatTime(currentPlayer.current.duration)}</span>
+                      <div className="flex-1 pt-4">
+                        <h1 className="text-3xl font-bold mb-2 text-white">{currentPlayer.current.title}</h1>
+                        <p className="text-xl text-gray-300 mb-4">{currentPlayer.current.author}</p>
+
+                        <div className="flex items-center space-x-4 mb-6">
+                          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                            <Heart className="h-6 w-6" />
+                          </button>
+                          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                            <Download className="h-6 w-6" />
+                          </button>
+                          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                            <MoreVertical className="h-6 w-6" />
+                          </button>
+                        </div>
+
+                        {/* Timeline */}
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-sm text-gray-400 w-12 text-right">
+                              {formatTime(currentPlayer.position)}
+                            </span>
+                            <div className="flex-1 relative">
+                              <input
+                                type="range"
+                                min="0"
+                                max="100"
+                                value={(currentPlayer.position / currentPlayer.current.duration) * 100}
+                                onChange={(e) => {
+                                  setIsSeekingTimeline(true)
+                                  seekToPosition(Number(e.target.value))
+                                  setTimeout(() => setIsSeekingTimeline(false), 1000)
+                                }}
+                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                                style={{
+                                  background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(currentPlayer.position / currentPlayer.current.duration) * 100}%, #374151 ${(currentPlayer.position / currentPlayer.current.duration) * 100}%, #374151 100%)`,
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm text-gray-400 w-12">
+                              {formatTime(currentPlayer.current.duration)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Controls */}
+                        <div className="flex items-center justify-center space-x-4 mt-6">
+                          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                            <Shuffle className="h-5 w-5" />
+                          </button>
+
+                          <button
+                            onClick={() => controlPlayer("previous")}
+                            className="p-3 hover:bg-gray-800 rounded-full transition-colors"
+                          >
+                            <SkipBack className="h-6 w-6" />
+                          </button>
+
+                          <button
+                            onClick={() => controlPlayer(currentPlayer.paused ? "play" : "pause")}
+                            disabled={loading}
+                            className="p-4 bg-red-600 hover:bg-red-700 rounded-full transition-colors disabled:opacity-50"
+                          >
+                            {currentPlayer.paused ? <Play className="h-8 w-8 ml-1" /> : <Pause className="h-8 w-8" />}
+                          </button>
+
+                          <button
+                            onClick={() => controlPlayer("skip")}
+                            disabled={loading}
+                            className="p-3 hover:bg-gray-800 rounded-full transition-colors"
+                          >
+                            <SkipForward className="h-6 w-6" />
+                          </button>
+
+                          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
+                            <Repeat className="h-5 w-5" />
+                          </button>
+                        </div>
+
+                        {/* Volume */}
+                        <div className="flex items-center justify-center space-x-3 mt-6">
+                          <button onClick={toggleMute} className="p-2 hover:bg-gray-800 rounded-full">
+                            {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                          </button>
+                          <div className="w-32">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              value={isMuted ? 0 : volume}
+                              onChange={(e) => handleVolumeChange(Number(e.target.value))}
+                              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                              style={{
+                                background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${isMuted ? 0 : volume}%, #374151 ${isMuted ? 0 : volume}%, #374151 100%)`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm text-gray-400 w-8">{isMuted ? 0 : volume}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-gray-500 dark:text-gray-400">Nothing is currently playing</p>
-                )}
-
-                {/* Controls */}
-                <div className="flex items-center justify-center gap-4">
-                  <button
-                    onClick={() => controlPlayer(currentPlayer.paused ? "play" : "pause")}
-                    disabled={loading}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                  >
-                    {currentPlayer.paused ? <Play className="h-5 w-5" /> : <Pause className="h-5 w-5" />}
-                  </button>
-                  <button
-                    onClick={() => controlPlayer("skip")}
-                    disabled={loading}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                  >
-                    <SkipForward className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => controlPlayer("stop")}
-                    disabled={loading}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                  >
-                    <Square className="h-5 w-5" />
-                  </button>
-                </div>
-
-                <hr className="border-gray-200 dark:border-gray-700" />
-
-                {/* Volume Control */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Volume2 className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">Volume: {currentPlayer.volume}%</span>
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center">
+                      <Music className="h-24 w-24 mx-auto text-gray-600 mb-4" />
+                      <h2 className="text-2xl font-semibold text-gray-300 mb-2">No music playing</h2>
+                      <p className="text-gray-500">Use Discord commands to start playing music</p>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={currentPlayer.volume}
-                    onChange={(e) => controlPlayer("volume", e.target.value)}
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-                  />
-                </div>
+                )}
               </div>
-            )}
 
-            {activeTab === "queue" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Search & Add to Queue</h3>
-                  <div className="flex gap-2">
+              {/* Queue Sidebar */}
+              <div className="w-80 bg-gray-900 border-l border-gray-800 p-4">
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Search className="h-4 w-4 text-gray-400" />
                     <input
                       type="text"
-                      placeholder="Search for a song or paste URL..."
+                      placeholder="Search songs..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyPress={(e) => {
@@ -412,7 +531,7 @@ export default function Dashboard() {
                           setSearchQuery("")
                         }
                       }}
-                      className="flex-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
+                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-500"
                     />
                     <button
                       onClick={() => {
@@ -421,76 +540,141 @@ export default function Dashboard() {
                           setSearchQuery("")
                         }
                       }}
-                      disabled={loading || !searchQuery.trim()}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                      disabled={!searchQuery.trim()}
+                      className="p-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 rounded-lg transition-colors"
                     >
-                      Add
+                      <Plus className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                    Queue ({currentPlayer.queue.length})
-                  </h3>
-                  <div className="max-h-64 overflow-y-auto">
-                    {currentPlayer.queue.length > 0 ? (
-                      <div className="space-y-2">
-                        {currentPlayer.queue.map((track, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
-                          >
-                            <div className="flex-1">
-                              <p className="font-medium text-sm text-gray-900 dark:text-white">{track.title}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{track.author}</p>
-                            </div>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {formatTime(track.duration)}
-                            </span>
-                          </div>
-                        ))}
+                  <h3 className="text-lg font-semibold mb-3">Queue ({currentPlayer?.queue.length || 0})</h3>
+
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {currentPlayer?.queue.map((track, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center space-x-3 p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                      >
+                        <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center text-xs text-gray-400">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">{track.title}</p>
+                          <p className="text-xs text-gray-400 truncate">{track.author}</p>
+                        </div>
+                        <span className="text-xs text-gray-500">{formatTime(track.duration)}</span>
                       </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Music className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">Queue is empty</p>
-                      </div>
-                    )}
+                    ))}
                   </div>
+
+                  {!currentPlayer?.queue.length && (
+                    <div className="text-center py-8">
+                      <Music className="h-12 w-12 mx-auto text-gray-600 mb-2" />
+                      <p className="text-gray-500 text-sm">Queue is empty</p>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {players.length === 0 && botStatus?.botOnline && (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="text-center py-12 px-6">
-            <Music className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Active Players</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              Use slash commands in Discord to start playing music, then control it from here.
-            </p>
-            <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-              <p>
-                <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">/play [song name or URL]</code> -
-                Play music
-              </p>
-              <p>
-                <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">/pause</code> - Pause playback
-              </p>
-              <p>
-                <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">/skip</code> - Skip current song
-              </p>
-              <p>
-                <code className="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">/queue</code> - Show queue
-              </p>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+
+          {activeView === "servers" && (
+            <div className="flex-1 p-6">
+              <h2 className="text-2xl font-bold mb-6">Server Management</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {players.map((player) => (
+                  <div key={player.guildId} className="bg-gray-900 rounded-lg p-6 border border-gray-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">{getServerName(player.guildId)}</h3>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          player.connected ? "bg-green-900 text-green-300" : "bg-red-900 text-red-300"
+                        }`}
+                      >
+                        {player.connected ? "Connected" : "Disconnected"}
+                      </span>
+                    </div>
+
+                    {player.current && (
+                      <div className="mb-4">
+                        <div className="flex items-center space-x-3">
+                          <Image
+                            src={player.current.thumbnail || "/placeholder.svg"}
+                            alt="Track"
+                            width={48}
+                            height={48}
+                            className="w-12 h-12 rounded object-cover"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{player.current.title}</p>
+                            <p className="text-xs text-gray-400 truncate">{player.current.author}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2 text-sm text-gray-400">
+                      <div className="flex justify-between">
+                        <span>Status:</span>
+                        <span className={player.playing ? "text-green-400" : "text-gray-400"}>
+                          {player.playing ? "Playing" : player.paused ? "Paused" : "Stopped"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Queue:</span>
+                        <span>{player.queue.length} songs</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Volume:</span>
+                        <span>{player.volume}%</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedGuild(player.guildId)}
+                      className="w-full mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                    >
+                      Control Player
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {players.length === 0 && (
+                <div className="text-center py-12">
+                  <Server className="h-16 w-16 mx-auto text-gray-600 mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-300 mb-2">No Active Servers</h3>
+                  <p className="text-gray-500">Start playing music in Discord to see servers here</p>
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      </div>
+
+      <style jsx>{`
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          height: 16px;
+          width: 16px;
+          border-radius: 50%;
+          background: #ef4444;
+          cursor: pointer;
+          box-shadow: 0 0 2px 0 #000;
+        }
+        
+        .slider::-moz-range-thumb {
+          height: 16px;
+          width: 16px;
+          border-radius: 50%;
+          background: #ef4444;
+          cursor: pointer;
+          border: none;
+          box-shadow: 0 0 2px 0 #000;
+        }
+      `}</style>
     </div>
   )
 }

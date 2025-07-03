@@ -93,7 +93,7 @@ export class DiscordMusicBot {
       console.log(`Now playing: ${track.title} by ${track.author}`)
       const channel = this.client.channels.cache.get(player.textId!)
       if (channel instanceof TextChannel || channel instanceof NewsChannel || channel instanceof ThreadChannel) {
-        channel.send(`Now playing: **${track.title}** by **${track.author}**`)
+        channel.send(`🎵 Now playing: **${track.title}** by **${track.author}**`)
       }
     })
 
@@ -136,6 +136,12 @@ export class DiscordMusicBot {
         .setName("volume")
         .setDescription("Set the volume")
         .addIntegerOption((option) => option.setName("level").setDescription("Volume level (0-100)").setRequired(true)),
+      new SlashCommandBuilder()
+        .setName("seek")
+        .setDescription("Seek to a position in the current song")
+        .addIntegerOption((option) =>
+          option.setName("position").setDescription("Position in seconds").setRequired(true),
+        ),
     ]
 
     try {
@@ -196,6 +202,9 @@ export class DiscordMusicBot {
         break
       case "volume":
         await this.handleVolume(interaction, player)
+        break
+      case "seek":
+        await this.handleSeek(interaction, player)
         break
     }
   }
@@ -385,6 +394,28 @@ export class DiscordMusicBot {
     await interaction.reply(`🔊 Set volume to **${volume}%**.`)
   }
 
+  private async handleSeek(interaction: ChatInputCommandInteraction, player: KazagumoPlayer | undefined) {
+    if (!player || !player.queue.current) {
+      return interaction.reply({
+        content: "Nothing is currently playing.",
+        ephemeral: true,
+      })
+    }
+
+    const position = interaction.options.getInteger("position", true) * 1000 // Convert to milliseconds
+    const duration = player.queue.current.length || 0
+
+    if (position < 0 || position > duration) {
+      return interaction.reply({
+        content: `Position must be between 0 and ${Math.floor(duration / 1000)} seconds.`,
+        ephemeral: true,
+      })
+    }
+
+    await player.shoukaku.seekTo(position)
+    await interaction.reply(`⏩ Seeked to **${this.formatTime(position)}**.`)
+  }
+
   private formatTime(ms: number): string {
     const seconds = Math.floor(ms / 1000)
     const minutes = Math.floor(seconds / 60)
@@ -428,6 +459,15 @@ export class DiscordMusicBot {
     }
 
     return track
+  }
+
+  public async seekTo(guildId: string, position: number) {
+    const player = this.kazagumo.players.get(guildId)
+    if (!player) {
+      throw new Error("No active player found")
+    }
+
+    await player.shoukaku.seekTo(position)
   }
 }
 

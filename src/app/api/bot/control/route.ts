@@ -3,12 +3,12 @@ import { botManager } from "@/lib/bot-manager"
 
 export async function POST(request: NextRequest) {
   try {
-    const { action, guildId, query } = await request.json()
-    console.log("Control request:", { action, guildId, query })
-
     if (!botManager.hasBot()) {
       return NextResponse.json({ error: "Bot not online" }, { status: 503 })
     }
+
+    const { action, guildId, query } = await request.json()
+    console.log("Control request:", { action, guildId, query })
 
     const bot = botManager.getBotSync()!
     const kazagumo = bot.getKazagumo()
@@ -57,6 +57,16 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "Nothing is playing" }, { status: 400 })
         }
 
+      case "previous":
+        if (player.queue.previous.length > 0) {
+          const previousTrack = player.queue.previous[player.queue.previous.length - 1]
+          player.queue.unshift(previousTrack)
+          await player.skip()
+          return NextResponse.json({ success: true, message: "Playing previous track" })
+        } else {
+          return NextResponse.json({ error: "No previous track available" }, { status: 400 })
+        }
+
       case "stop":
         player.queue.clear()
         player.destroy()
@@ -69,6 +79,20 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: true, message: `Set volume to ${volume}%` })
         } else {
           return NextResponse.json({ error: "Volume must be between 0 and 100" }, { status: 400 })
+        }
+
+      case "seek":
+        const position = Number.parseInt(query)
+        if (
+          player.queue.current &&
+          typeof player.queue.current.length === "number" &&
+          position >= 0 &&
+          position <= player.queue.current.length
+        ) {
+          await player.seek(position)
+          return NextResponse.json({ success: true, message: `Seeked to position` })
+        } else {
+          return NextResponse.json({ error: "Invalid seek position" }, { status: 400 })
         }
 
       default:

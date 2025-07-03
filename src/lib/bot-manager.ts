@@ -51,6 +51,10 @@ class BotManager {
   public getBotSync(): DiscordMusicBot | null {
     return this.bot
   }
+
+  public clearBot(): void {
+    this.bot = null
+  }
 }
 
 export const botManager = BotManager.getInstance()
