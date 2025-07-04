@@ -9,6 +9,12 @@
     pkgs.yarn
     pkgs.nodePackages.pnpm
     pkgs.bun
+    # Add the following packages for node-gyp compilation:
+    pkgs.python3
+    pkgs.gcc
+    pkgs.gnumake # This provides 'make'
+    pkgs.pkg-config
+    pkgs.libiconv
   ];
   # Sets environment variables in the workspace
   env = {};
