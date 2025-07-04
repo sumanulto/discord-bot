@@ -1,6 +1,4 @@
-"use client"
-
-import { Toaster } from "@/components/ui/sonner"
+import { Toaster } from "react-hot-toast"
 
 export default function ToasterClient() {
   return <Toaster />

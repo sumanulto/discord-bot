@@ -3,12 +3,14 @@ import { botManager } from "@/lib/bot-manager"
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json()
+    const { action, guildId, query, index } = body
+
+    console.log("Control request:", { action, guildId, query, index })
+
     if (!botManager.hasBot()) {
       return NextResponse.json({ error: "Bot not online" }, { status: 503 })
     }
-
-    const { action, guildId, query } = await request.json()
-    console.log("Control request:", { action, guildId, query })
 
     const bot = botManager.getBotSync()!
     const kazagumo = bot.getKazagumo()
@@ -89,44 +91,46 @@ export async function POST(request: NextRequest) {
           position >= 0 &&
           position <= player.queue.current.length
         ) {
-          await player.seek(position)
+          await player.shoukaku.seekTo(position)
           return NextResponse.json({ success: true, message: `Seeked to position` })
         } else {
           return NextResponse.json({ error: "Invalid seek position" }, { status: 400 })
         }
 
-      case "remove": {
-        const { index } = await request.json();
+      case "playNext":
         if (typeof index !== "number" || index < 0 || index >= player.queue.length) {
-          return NextResponse.json({ error: "Invalid track index" }, { status: 400 });
+          return NextResponse.json({ error: "Invalid track index" }, { status: 400 })
         }
 
-        // Remove the item from the queue
-        const removedTrack = player.queue[index];
-        player.queue.splice(index, 1);
+        // Get the track at the specified index
+        const trackToMoveNext = player.queue[index]
+
+        // Remove the track from its current position
+        player.queue.splice(index, 1)
+
+        // Add it to the front of the queue (position 0)
+        player.queue.unshift(trackToMoveNext)
 
         return NextResponse.json({
           success: true,
-          message: `Removed "${removedTrack.title}" from queue`,
-        });
-      }
+          message: `Moved "${trackToMoveNext.title}" to play next`,
+        })
 
-      case "playNext": {
-        const { index } = await request.json();
+      case "remove":
         if (typeof index !== "number" || index < 0 || index >= player.queue.length) {
-          return NextResponse.json({ error: "Invalid track index" }, { status: 400 });
+          return NextResponse.json({ error: "Invalid track index" }, { status: 400 })
         }
 
-        // Remove and insert at position 0 (front of queue)
-        const [track] = player.queue.splice(index, 1);
-        player.queue.unshift(track);
+        // Get the track to be removed
+        const trackToRemove = player.queue[index]
+
+        // Remove the track from the queue
+        player.queue.splice(index, 1)
 
         return NextResponse.json({
           success: true,
-          message: `Moved "${track.title}" to play next`,
-        });
-      }
-
+          message: `Removed "${trackToRemove.title}" from queue`,
+        })
 
       default:
         return NextResponse.json({ error: "Invalid action" }, { status: 400 })

@@ -1,8 +1,8 @@
-"use client";
-import { useState, useEffect } from "react";
-import Sidebar from "@/components/ui/SideBar";
-import MusicPlayerCard from "@/components/ui/PlayerCard";
-import Image from "next/image";
+"use client"
+import { useState, useEffect, useRef } from "react" // Import useRef
+import Sidebar from "@/components/ui/SideBar"
+import MusicPlayerCard from "@/components/ui/PlayerCard"
+import Image from "next/image"
 import {
   Square,
   Music,
@@ -15,220 +15,259 @@ import {
   ChevronDown,
   Cpu,
   Users,
-} from "lucide-react";
+} from "lucide-react"
 
 interface BotStatus {
-  botOnline: boolean;
-  guilds: number;
-  users: number;
-  players: number;
+  botOnline: boolean
+  guilds: number
+  users: number
+  players: number
   nodes: Array<{
-    identifier: string;
-    connected: boolean;
-    stats: any;
-  }>;
+    identifier: string
+    connected: boolean
+    stats: any
+  }>
 }
 
 interface Player {
-  guildId: string;
-  voiceChannel: string;
-  textChannel: string;
-  connected: boolean;
-  playing: boolean;
-  paused: boolean;
-  position: number;
-  volume: number;
+  guildId: string
+  voiceChannel: string
+  textChannel: string
+  connected: boolean
+  playing: boolean
+  paused: boolean
+  position: number
+  volume: number
   current: {
-    title: string;
-    author: string;
-    duration: number;
-    uri: string;
-    thumbnail?: string;
-  } | null;
+    title: string
+    author: string
+    duration: number
+    uri: string
+    thumbnail?: string
+  } | null
   queue: Array<{
-    title: string;
-    author: string;
-    duration: number;
-  }>;
+    title: string
+    author: string
+    duration: number
+    thumbnail?: string
+  }>
 }
 
 export default function Dashboard() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedGuild, setSelectedGuild] = useState<string>("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [activeView, setActiveView] = useState("player");
-  const [startingBot, setStartingBot] = useState(false);
-  const [restartingBot, setRestartingBot] = useState(false);
-  const [volume, setVolume] = useState(100);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isSeekingTimeline, setIsSeekingTimeline] = useState(false);
-  const [isStateButtonOpen, setIsStateButtonOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [botStatus, setBotStatus] = useState<BotStatus | null>(null)
+  const [players, setPlayers] = useState<Player[]>([])
+  const [selectedGuild, setSelectedGuild] = useState<string>("")
+
+  // Create a ref to store the latest selectedGuild state
+  const selectedGuildRef = useRef(selectedGuild);
+
+  // Effect to keep the ref updated whenever selectedGuild changes
+  useEffect(() => {
+    selectedGuildRef.current = selectedGuild;
+  }, [selectedGuild]);
+
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string>("")
+  const [activeView, setActiveView] = useState("player")
+  const [startingBot, setStartingBot] = useState(false)
+  const [restartingBot, setRestartingBot] = useState(false)
+  const [volume, setVolume] = useState(100)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isSeekingTimeline, setIsSeekingTimeline] = useState(false)
+  const [isStateButtonOpen, setIsStateButtonOpen] = useState(false)
 
   useEffect(() => {
-    fetchBotStatus();
+    fetchBotStatus()
+    // Initial fetch, uses the current selectedGuild state
     fetchPlayers();
 
     const interval = setInterval(() => {
       if (!isSeekingTimeline) {
-        fetchBotStatus();
-        fetchPlayers();
+        fetchBotStatus()
+        // Pass the latest selectedGuild from the ref to the fetchPlayers function
+        fetchPlayers(selectedGuildRef.current);
       }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [isSeekingTimeline]);
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [isSeekingTimeline]) // This useEffect now only depends on isSeekingTimeline
 
   const fetchBotStatus = async () => {
     try {
-      const response = await fetch("/api/bot/status");
-      const data = await response.json();
-      setBotStatus(data);
+      const response = await fetch("/api/bot/status")
+      const data = await response.json()
+      setBotStatus(data)
       if (data.error && !data.botOnline) {
-        setError(data.error);
+        setError(data.error)
       } else {
-        setError("");
+        setError("")
       }
     } catch (error) {
-      console.error("Failed to fetch bot status:", error);
-      setError("Failed to connect to bot API");
+      console.error("Failed to fetch bot status:", error)
+      setError("Failed to connect to bot API")
     }
-  };
+  }
 
-  const fetchPlayers = async () => {
+  // Modified fetchPlayers to accept an optional guildId, primarily for use with useRef
+  const fetchPlayers = async (currentGuildIdFromRef?: string) => {
     try {
-      const response = await fetch("/api/bot/players");
-      const data = await response.json();
-      setPlayers(data);
-      if (data.length > 0 && !selectedGuild) {
-        setSelectedGuild(data[0].guildId);
+      const response = await fetch("/api/bot/players")
+      const data: Player[] = await response.json()
+      setPlayers(data)
+
+      // Determine which selected guild ID to use:
+      // 1. If explicitly passed from a ref (for interval calls), use that.
+      // 2. Otherwise, use the component's state (for initial calls or direct triggers).
+      const guildIdToUse = currentGuildIdFromRef !== undefined ? currentGuildIdFromRef : selectedGuild;
+
+      const currentSelectedGuildExists = data.some((p) => p.guildId === guildIdToUse)
+
+      // Debugging: Log before conditional setSelectedGuild
+      console.log("--- fetchPlayers Debug ---");
+      console.log("Current selectedGuild (from state):", selectedGuild);
+      console.log("Current selectedGuild (from ref/param):", guildIdToUse);
+      console.log("Does current selected guild exist in new data?", currentSelectedGuildExists);
+      console.log("Fetched players data:", data.map(p => ({ guildId: p.guildId, name: getServerName(p.guildId) })));
+
+
+      // If no guild is currently selected (or guildIdToUse is empty)
+      // OR the selected guild is no longer valid in the fetched list,
+      // then default to the first player if available.
+      if (!guildIdToUse || !currentSelectedGuildExists) {
+        if (data.length > 0) {
+          console.log(`Resetting selectedGuild to: ${data[0].guildId} (from ${guildIdToUse || 'empty'})`);
+          setSelectedGuild(data[0].guildId)
+        } else {
+          console.log("Clearing selectedGuild (no players available)");
+          setSelectedGuild("") // No players available, clear selection
+        }
+      } else {
+        console.log("Retaining selectedGuild:", guildIdToUse);
       }
+      console.log("--- End fetchPlayers Debug ---");
+
     } catch (error) {
-      console.error("Failed to fetch players:", error);
+      console.error("Failed to fetch players:", error)
     }
-  };
+  }
 
   const startBot = async () => {
-    setStartingBot(true);
+    setStartingBot(true)
     try {
-      const response = await fetch("/api/bot/start", { method: "POST" });
-      const data = await response.json();
+      const response = await fetch("/api/bot/start", { method: "POST" })
+      const data = await response.json()
 
       if (data.success) {
-        setError("");
+        setError("")
         setTimeout(() => {
-          fetchBotStatus();
-          fetchPlayers();
-        }, 2000);
+          fetchBotStatus()
+          fetchPlayers() // Calls fetchPlayers without an argument, using state's selectedGuild
+        }, 2000)
       } else {
-        setError(data.error || "Failed to start bot");
+        setError(data.error || "Failed to start bot")
       }
     } catch (error) {
-      console.error("Failed to start bot:", error);
-      setError("Failed to start bot");
+      console.error("Failed to start bot:", error)
+      setError("Failed to start bot")
     } finally {
-      setStartingBot(false);
+      setStartingBot(false)
     }
-  };
+  }
 
   const stopBot = async () => {
     try {
-      const response = await fetch("/api/bot/stop", { method: "POST" });
-      const data = await response.json();
+      const response = await fetch("/api/bot/stop", { method: "POST" })
+      const data = await response.json()
 
       if (data.success) {
-        setBotStatus((prev) => (prev ? { ...prev, botOnline: false } : null));
-        setPlayers([]);
-        setError("");
+        setBotStatus((prev) => (prev ? { ...prev, botOnline: false } : null))
+        setPlayers([])
+        setError("")
       }
     } catch (error) {
-      setError("Failed to stop bot");
+      setError("Failed to stop bot")
     }
-  };
+  }
 
   const restartBot = async () => {
-    setRestartingBot(true);
+    setRestartingBot(true)
     try {
-      await stopBot();
+      await stopBot()
       setTimeout(async () => {
-        await startBot();
-        setRestartingBot(false);
-      }, 2000);
+        await startBot()
+        setRestartingBot(false)
+      }, 2000)
     } catch (error) {
-      setRestartingBot(false);
-      setError("Failed to restart bot");
+      setRestartingBot(false)
+      setError("Failed to restart bot")
     }
-  };
+  }
 
   const controlPlayer = async (action: string, query?: string) => {
-    if (!selectedGuild) return;
+    if (!selectedGuild) return
 
-    setLoading(true);
+    setLoading(true)
     try {
       const response = await fetch("/api/bot/control", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, guildId: selectedGuild, query }),
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || "Failed to control player");
+        setError(data.error || "Failed to control player")
       } else {
-        setError("");
-        setTimeout(fetchPlayers, 500);
+        setError("")
+        setTimeout(fetchPlayers, 500) // Calls fetchPlayers without an argument, using state's selectedGuild
       }
     } catch (error) {
-      console.error("Failed to control player:", error);
-      setError("Failed to control player");
+      console.error("Failed to control player:", error)
+      setError("Failed to control player")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const seekToPosition = async (percentage: number) => {
-    if (!currentPlayer?.current) return;
+    if (!currentPlayer?.current) return
 
-    const newPosition = Math.floor(
-      (percentage / 100) * currentPlayer.current.duration
-    );
-    await controlPlayer("seek", newPosition.toString());
-  };
+    const newPosition = Math.floor((percentage / 100) * currentPlayer.current.duration)
+    await controlPlayer("seek", newPosition.toString())
+  }
 
   const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
-    controlPlayer("volume", newVolume.toString());
-  };
+    setVolume(newVolume)
+    controlPlayer("volume", newVolume.toString())
+  }
 
   const toggleMute = () => {
     if (isMuted) {
-      setIsMuted(false);
-      controlPlayer("volume", volume.toString());
+      setIsMuted(false)
+      controlPlayer("volume", volume.toString())
     } else {
-      setIsMuted(true);
-      controlPlayer("volume", "0");
+      setIsMuted(true)
+      controlPlayer("volume", "0")
     }
-  };
+  }
 
   const formatTime = (ms: number) => {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
+    const seconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
+  }
 
   const getServerName = (guildId: string) => {
     const serverNames = {
       [process.env.NEXT_PUBLIC_SERVER_1_ID || ""]: "Kraftamine",
       [process.env.NEXT_PUBLIC_SERVER_2_ID || ""]: "PP'S Server",
       [process.env.NEXT_PUBLIC_SERVER_3_ID || ""]: "Music Server",
-    };
-    return serverNames[guildId] || `Server ${guildId.slice(-4)}`;
-  };
+    }
+    return serverNames[guildId] || `Server ${guildId.slice(-4)}`
+  }
 
- 
   const controlButtons = [
     {
       label: startingBot ? "Starting..." : "Start",
@@ -248,7 +287,7 @@ export default function Dashboard() {
       onClick: stopBot,
       disabled: !botStatus?.botOnline,
     },
-  ];
+  ]
 
   const stats = [
     {
@@ -268,20 +307,13 @@ export default function Dashboard() {
     },
     {
       label: "Nodes",
-      value: String(
-        botStatus?.nodes.filter((n: { connected: boolean }) => n.connected)
-          .length || 0
-      ),
+      value: String(botStatus?.nodes.filter((n: { connected: boolean }) => n.connected).length || 0),
       icon: <Cpu />,
-      className: botStatus?.nodes.some(
-        (n: { connected: boolean }) => n.connected
-      )
-        ? "text-green-400"
-        : "text-red-400",
+      className: botStatus?.nodes.some((n: { connected: boolean }) => n.connected) ? "text-green-400" : "text-red-400",
     },
-  ];
+  ]
 
-  const currentPlayer = players.find((p) => p.guildId === selectedGuild);
+  const currentPlayer = players.find((p) => p.guildId === selectedGuild)
 
   if (!botStatus) {
     return (
@@ -292,7 +324,7 @@ export default function Dashboard() {
           <p className="text-gray-400">Connecting to the bot...</p>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -302,14 +334,14 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 gap-4">
             <div
-              className="hover:bg-neutral-800 rounded p-2 cursor-pointer  border-neutral-800 border"
+              className="hover:bg-neutral-800 rounded p-2 cursor-pointer border-neutral-800 border"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
             >
-              <Menu className="h-5 w-5 text-slate-300  " />
+              <Menu className="h-5 w-5 text-slate-300" />
             </div>
             <div className="flex items-center space-x-2">
-              <div className=" bg-[#D8012A] rounded-full p-1">
-                <Music2 className="h-6 w-6 text-slate-50 p-1 font-bold border-slate-50 border rounded-full " />
+              <div className="bg-[#D8012A] rounded-full p-1">
+                <Music2 className="h-6 w-6 text-slate-50 p-1 font-bold border-slate-50 border rounded-full" />
               </div>
 
               <h1 className="text-2xl font-bold">Discord Music</h1>
@@ -322,14 +354,8 @@ export default function Dashboard() {
             <div className="relative">
               <div className="flex items-center space-x-3 bg-slate-200 rounded-full border border-gray-200 px-4 py-1 cursor-pointer">
                 <span className="text-gray-800 text-base">Status</span>
-                <div
-                  className={`h-2 w-2 rounded-full ${
-                    botStatus?.botOnline ? "bg-green-600" : "bg-red-600"
-                  }`}
-                />
-                <span className="text-gray-700">
-                  {botStatus?.botOnline ? "Online" : "Offline"}
-                </span>
+                <div className={`h-2 w-2 rounded-full ${botStatus?.botOnline ? "bg-green-600" : "bg-red-600"}`} />
+                <span className="text-gray-700">{botStatus?.botOnline ? "Online" : "Offline"}</span>
                 <ChevronDown
                   onClick={() => setIsStateButtonOpen((prev) => !prev)}
                   className="h-5 w-5 pl-2 border-l-2 border-gray-800 text-gray-700"
@@ -397,11 +423,8 @@ export default function Dashboard() {
                 loading={loading}
                 setIsSeekingTimeline={setIsSeekingTimeline}
                 selectedGuild={selectedGuild}
-                fatchPlayers={fetchPlayers}
+                fetchPlayers={fetchPlayers}
               />
-
-              
-              
             </div>
           )}
 
@@ -410,19 +433,12 @@ export default function Dashboard() {
               <h2 className="text-2xl font-bold mb-6">Server Management</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {players.map((player) => (
-                  <div
-                    key={player.guildId}
-                    className="bg-neutral-700 rounded-lg p-6 border border-stone-800"
-                  >
+                  <div key={player.guildId} className="bg-neutral-700 rounded-lg p-6 border border-stone-800">
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">
-                        {getServerName(player.guildId)}
-                      </h3>
+                      <h3 className="text-lg font-semibold">{getServerName(player.guildId)}</h3>
                       <span
                         className={`px-2 py-1 rounded-full text-xs ${
-                          player.connected
-                            ? "bg-green-900 text-green-300"
-                            : "bg-red-900 text-red-300"
+                          player.connected ? "bg-green-900 text-green-300" : "bg-red-900 text-red-300"
                         }`}
                       >
                         {player.connected ? "Connected" : "Disconnected"}
@@ -440,12 +456,8 @@ export default function Dashboard() {
                             className="w-12 h-12 rounded object-cover"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {player.current.title}
-                            </p>
-                            <p className="text-xs text-gray-400 truncate">
-                              {player.current.author}
-                            </p>
+                            <p className="text-sm font-medium truncate">{player.current.title}</p>
+                            <p className="text-xs text-gray-400 truncate">{player.current.author}</p>
                           </div>
                         </div>
                       </div>
@@ -454,16 +466,8 @@ export default function Dashboard() {
                     <div className="space-y-2 text-sm text-gray-400">
                       <div className="flex justify-between">
                         <span>Status:</span>
-                        <span
-                          className={
-                            player.playing ? "text-green-400" : "text-gray-400"
-                          }
-                        >
-                          {player.playing
-                            ? "Playing"
-                            : player.paused
-                            ? "Paused"
-                            : "Stopped"}
+                        <span className={player.playing ? "text-green-400" : "text-gray-400"}>
+                          {player.playing ? "Playing" : player.paused ? "Paused" : "Stopped"}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -489,12 +493,8 @@ export default function Dashboard() {
               {players.length === 0 && (
                 <div className="text-center py-12">
                   <Server className="h-16 w-16 mx-auto text-gray-600 mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-300 mb-2">
-                    No Active Servers
-                  </h3>
-                  <p className="text-gray-500">
-                    Start playing music in Discord to see servers here
-                  </p>
+                  <h3 className="text-xl font-semibold text-gray-300 mb-2">No Active Servers</h3>
+                  <p className="text-gray-500">Start playing music in Discord to see servers here</p>
                 </div>
               )}
             </div>
@@ -524,5 +524,5 @@ export default function Dashboard() {
         }
       `}</style>
     </div>
-  );
+  )
 }
