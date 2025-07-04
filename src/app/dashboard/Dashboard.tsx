@@ -463,17 +463,17 @@ export default function Dashboard() {
           </aside>
         ) : (
           <aside className=" border-r border-stone-800 relative">
-            <div className="p-4">
-              <nav className="space-y-2">
+            <div className="p-2">
+              <nav className=" flex flex-col gap-2">
                 <button
                   onClick={() => setActiveView("player")}
-                  className={` px-3 py-2 flex-col flex items-center justify-center  rounded-lg transition-colors ${
+                  className={`text-left px-3 py-2 rounded-lg flex-col flex items-center justify-center transition-colors ${
                     activeView === "player"
                       ? "bg-neutral-800 text-slate-200"
                       : "text-gray-300 hover:bg-neutral-900"
                   }`}
                 >
-                  <Music className="h-6 w-6 inline mr-3 items-center justify-center" />
+                  <Music className=" h-6 w-6 inline" />
                   <span className="text-xs">Player</span>
                 </button>
                 <button
@@ -484,14 +484,14 @@ export default function Dashboard() {
                       : "text-slate-300 hover:bg-neutral-900"
                   }`}
                 >
-                  <Server className="h-6 w-6 inline mr-3" />
+                  <Server className="h-6 w-6 inline" />
                   <span className="text-xs">Servers</span>
                 </button>
               </nav>
             </div>
 
             {/* Server List */}
-            <div className="px-4 pb-4">
+            <div className="px-4 mt-4 pb-4">
               <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider">
                 Active
               </h3>
@@ -508,7 +508,7 @@ export default function Dashboard() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-sm">
-                        {getServerName(player.guildId)}
+                        {getServerName(player.guildId)?.charAt(0)}
                       </span>
                       {player.playing && (
                         <div className="flex space-x-1">
@@ -531,7 +531,6 @@ export default function Dashboard() {
 
             {/* Stats */}
             <div className="px-4 pb-4 flex flex-col border-t border-stone-800 pt-4 absolute bottom-0 w-full">
-
               <div className="flex flex-col gap-2 text-sm text-gray-400">
                 {stats.map((item, index) => (
                   <div
@@ -563,100 +562,44 @@ export default function Dashboard() {
               {/* Player Content */}
               <div className="flex-1 p-6">
                 {currentPlayer.current ? (
-                  <div className="max-w-4xl mx-auto">
-                    {/* Now Playing */}
-                    <div className="flex items-start space-x-6 mb-8">
-                      <div className="relative">
-                        <Image
-                          src={
-                            currentPlayer.current.thumbnail ||
-                            "/placeholder.svg"
-                          }
-                          alt="Album art"
-                          width={240}
-                          height={240}
-                          className="w-60 h-60 rounded-lg shadow-2xl object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-20 rounded-lg"></div>
-                      </div>
+                  <div className="flex-1 flex h-full flex-col  text-white relative">
+                    {/* Fullscreen Image Background */}
+                    <div className="flex-1 flex items-center justify-center z-0">
+                      <Image
+                        src={
+                          currentPlayer.current.thumbnail || "/placeholder.svg"
+                        }
+                        alt="Album Art"
+                        width={300}
+                        height={300}
+                        className="rounded-xl bg-cover shadow-2xl object-cover max-w-96 h-auto"
+                      />
+                    </div>
 
-                      <div className="flex-1 pt-4">
-                        <h1 className="text-3xl font-bold mb-2 text-white">
-                          {currentPlayer.current.title}
-                        </h1>
-                        <p className="text-xl text-gray-300 mb-4">
-                          {currentPlayer.current.author}
-                        </p>
-
-                        <div className="flex items-center space-x-4 mb-6">
-                          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
-                            <Heart className="h-6 w-6" />
-                          </button>
-                          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
-                            <Download className="h-6 w-6" />
-                          </button>
-                          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
-                            <MoreVertical className="h-6 w-6" />
-                          </button>
-                        </div>
-
-                        {/* Timeline */}
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-3">
-                            <span className="text-sm text-gray-400 w-12 text-right">
-                              {formatTime(currentPlayer.position)}
-                            </span>
-                            <div className="flex-1 relative">
-                              <input
-                                type="range"
-                                min="0"
-                                max="100"
-                                value={
-                                  (currentPlayer.position /
-                                    currentPlayer.current.duration) *
-                                  100
-                                }
-                                onChange={(e) => {
-                                  setIsSeekingTimeline(true);
-                                  seekToPosition(Number(e.target.value));
-                                  setTimeout(
-                                    () => setIsSeekingTimeline(false),
-                                    1000
-                                  );
-                                }}
-                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-                                style={{
-                                  background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${
-                                    (currentPlayer.position /
-                                      currentPlayer.current.duration) *
-                                    100
-                                  }%, #374151 ${
-                                    (currentPlayer.position /
-                                      currentPlayer.current.duration) *
-                                    100
-                                  }%, #374151 100%)`,
-                                }}
-                              />
-                            </div>
-                            <span className="text-sm text-gray-400 w-12">
-                              {formatTime(currentPlayer.current.duration)}
-                            </span>
-                          </div>
+                    {/* Foreground Content */}
+                    <div className="z-10 flex-1 flex flex-col justify-end px-6 pb-8">
+                      <div className="max-w-4xl mx-auto space-y-4">
+                        {/* Song Info */}
+                        <div>
+                          <h1 className="text-4xl font-bold">
+                            {currentPlayer.current.title}
+                          </h1>
+                          <p className="text-lg text-gray-300">
+                            {currentPlayer.current.author}
+                          </p>
                         </div>
 
                         {/* Controls */}
-                        <div className="flex items-center justify-center space-x-4 mt-6">
+                        <div className="flex justify-center items-center space-x-4 mt-4">
                           <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
                             <Shuffle className="h-5 w-5" />
                           </button>
-
                           <button
                             onClick={() => controlPlayer("previous")}
                             className="p-3 hover:bg-gray-800 rounded-full transition-colors"
                           >
                             <SkipBack className="h-6 w-6" />
                           </button>
-
                           <button
                             onClick={() =>
                               controlPlayer(
@@ -672,7 +615,6 @@ export default function Dashboard() {
                               <Pause className="h-8 w-8" />
                             )}
                           </button>
-
                           <button
                             onClick={() => controlPlayer("skip")}
                             disabled={loading}
@@ -680,14 +622,53 @@ export default function Dashboard() {
                           >
                             <SkipForward className="h-6 w-6" />
                           </button>
-
                           <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
                             <Repeat className="h-5 w-5" />
                           </button>
                         </div>
 
+                        {/* Timeline */}
+                        <div className="flex items-center space-x-3 w-full">
+                          <span className="text-sm text-gray-400 w-12 text-right">
+                            {formatTime(currentPlayer.position)}
+                          </span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={
+                              (currentPlayer.position /
+                                currentPlayer.current.duration) *
+                              100
+                            }
+                            onChange={(e) => {
+                              setIsSeekingTimeline(true);
+                              seekToPosition(Number(e.target.value));
+                              setTimeout(
+                                () => setIsSeekingTimeline(false),
+                                1000
+                              );
+                            }}
+                            className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                            style={{
+                              background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${
+                                (currentPlayer.position /
+                                  currentPlayer.current.duration) *
+                                100
+                              }%, #374151 ${
+                                (currentPlayer.position /
+                                  currentPlayer.current.duration) *
+                                100
+                              }%, #374151 100%)`,
+                            }}
+                          />
+                          <span className="text-sm text-gray-400 w-12">
+                            {formatTime(currentPlayer.current.duration)}
+                          </span>
+                        </div>
+
                         {/* Volume */}
-                        <div className="flex items-center justify-center space-x-3 mt-6">
+                        <div className="flex items-center justify-center space-x-3 mt-4">
                           <button
                             onClick={toggleMute}
                             className="p-2 hover:bg-gray-800 rounded-full"
@@ -698,26 +679,24 @@ export default function Dashboard() {
                               <Volume2 className="h-5 w-5" />
                             )}
                           </button>
-                          <div className="w-32">
-                            <input
-                              type="range"
-                              min="0"
-                              max="100"
-                              value={isMuted ? 0 : volume}
-                              onChange={(e) =>
-                                handleVolumeChange(Number(e.target.value))
-                              }
-                              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                              style={{
-                                background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${
-                                  isMuted ? 0 : volume
-                                }%, #374151 ${
-                                  isMuted ? 0 : volume
-                                }%, #374151 100%)`,
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm text-gray-400 w-8">
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={isMuted ? 0 : volume}
+                            onChange={(e) =>
+                              handleVolumeChange(Number(e.target.value))
+                            }
+                            className="w-32 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                            style={{
+                              background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${
+                                isMuted ? 0 : volume
+                              }%, #374151 ${
+                                isMuted ? 0 : volume
+                              }%, #374151 100%)`,
+                            }}
+                          />
+                          <span className="text-sm text-gray-400 w-8 text-right">
                             {isMuted ? 0 : volume}
                           </span>
                         </div>

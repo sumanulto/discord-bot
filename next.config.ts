@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
         pathname: "/vi/**",
       },
     ],
+    
+    domains: ['i.ytimg.com', 'cdn.example.com', 'your-thumbnail-domain.com'],
   },
 };
 
