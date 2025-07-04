@@ -95,6 +95,39 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "Invalid seek position" }, { status: 400 })
         }
 
+      case "remove": {
+        const { index } = await request.json();
+        if (typeof index !== "number" || index < 0 || index >= player.queue.length) {
+          return NextResponse.json({ error: "Invalid track index" }, { status: 400 });
+        }
+
+        // Remove the item from the queue
+        const removedTrack = player.queue[index];
+        player.queue.splice(index, 1);
+
+        return NextResponse.json({
+          success: true,
+          message: `Removed "${removedTrack.title}" from queue`,
+        });
+      }
+
+      case "playNext": {
+        const { index } = await request.json();
+        if (typeof index !== "number" || index < 0 || index >= player.queue.length) {
+          return NextResponse.json({ error: "Invalid track index" }, { status: 400 });
+        }
+
+        // Remove and insert at position 0 (front of queue)
+        const [track] = player.queue.splice(index, 1);
+        player.queue.unshift(track);
+
+        return NextResponse.json({
+          success: true,
+          message: `Moved "${track.title}" to play next`,
+        });
+      }
+
+
       default:
         return NextResponse.json({ error: "Invalid action" }, { status: 400 })
     }

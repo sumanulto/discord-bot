@@ -184,3 +184,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes bar {
+  0%, 100% {
+    height: 6px;
+  }
+  50% {
+    height: 16px;
+  }
+}
+
+.animate-bar {
+  animation-name: bar;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+  transform-origin: bottom; 
+  height: 6px;
+}
+
+

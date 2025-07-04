@@ -1,27 +1,15 @@
 "use client";
-
 import { useState, useEffect } from "react";
+import Sidebar from "@/components/ui/SideBar";
+import MusicPlayerCard from "@/components/ui/PlayerCard";
 import Image from "next/image";
 import {
-  Play,
-  Pause,
-  SkipForward,
-  SkipBack,
   Square,
-  Volume2,
-  VolumeX,
   Music,
   Server,
   AlertCircle,
   Power,
   RotateCcw,
-  Search,
-  Plus,
-  MoreVertical,
-  Shuffle,
-  Repeat,
-  Heart,
-  Download,
   Menu,
   Music2,
   ChevronDown,
@@ -68,7 +56,6 @@ export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedGuild, setSelectedGuild] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
@@ -241,6 +228,7 @@ export default function Dashboard() {
     return serverNames[guildId] || `Server ${guildId.slice(-4)}`;
   };
 
+ 
   const controlButtons = [
     {
       label: startingBot ? "Starting..." : "Start",
@@ -265,24 +253,29 @@ export default function Dashboard() {
   const stats = [
     {
       label: "Servers",
-      value: botStatus?.guilds || 0,
-      icon: <Server className="h-5 w-5" />,
+      value: String(botStatus?.guilds || 0),
+      icon: <Server />,
     },
     {
       label: "Users",
-      value: botStatus?.users || 0,
-      icon: <Users className="h-5 w-5" />,
+      value: String(botStatus?.users || 0),
+      icon: <Users />,
     },
     {
       label: "Players",
-      value: botStatus?.players || 0,
-      icon: <Music className="h-5 w-5" />,
+      value: String(botStatus?.players || 0),
+      icon: <Music2 />,
     },
     {
       label: "Nodes",
-      value: botStatus?.nodes.filter((n) => n.connected).length || 0,
-      icon: <Cpu className="h-5 w-5" />,
-      className: botStatus?.nodes.some((n) => n.connected)
+      value: String(
+        botStatus?.nodes.filter((n: { connected: boolean }) => n.connected)
+          .length || 0
+      ),
+      icon: <Cpu />,
+      className: botStatus?.nodes.some(
+        (n: { connected: boolean }) => n.connected
+      )
         ? "text-green-400"
         : "text-red-400",
     },
@@ -305,13 +298,15 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#030202] text-white">
       {/* Header */}
-      <header className="bg-black border-b border-stone-800 px-6 py-4">
+      <header className="border-b max-h-20 border-stone-800 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 gap-4">
-            <Menu
-              className="h-6 w-6 text-slate-300"
+            <div
+              className="hover:bg-neutral-800 rounded p-2 cursor-pointer  border-neutral-800 border"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
-            />
+            >
+              <Menu className="h-5 w-5 text-slate-300  " />
+            </div>
             <div className="flex items-center space-x-2">
               <div className=" bg-[#D8012A] rounded-full p-1">
                 <Music2 className="h-6 w-6 text-slate-50 p-1 font-bold border-slate-50 border rounded-full " />
@@ -364,187 +359,17 @@ export default function Dashboard() {
 
       <div className="flex h-[calc(100vh-80px)]">
         {/* Sidebar */}
-        {isSidebarOpen ? (
-          <aside className="w-64 border-r border-stone-800 relative">
-            <div className="p-4">
-              <nav className="space-y-2">
-                <button
-                  onClick={() => setActiveView("player")}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    activeView === "player"
-                      ? "bg-neutral-800 text-slate-200"
-                      : "text-gray-300 hover:bg-neutral-900"
-                  }`}
-                >
-                  <Music className="h-5 w-5 inline mr-3" />
-                  Player
-                </button>
-                <button
-                  onClick={() => setActiveView("servers")}
-                  className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                    activeView === "servers"
-                      ? "bg-neutral-800 text-white"
-                      : "text-slate-300 hover:bg-neutral-900"
-                  }`}
-                >
-                  <Server className="h-5 w-5 inline mr-3" />
-                  Servers
-                </button>
-              </nav>
-            </div>
-
-            {/* Server List */}
-            <div className="px-4 pb-4">
-              <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">
-                Active Servers
-              </h3>
-              <div className="space-y-2">
-                {players.map((player) => (
-                  <button
-                    key={player.guildId}
-                    onClick={() => setSelectedGuild(player.guildId)}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                      selectedGuild === player.guildId
-                        ? "bg-red-600 text-white"
-                        : "text-gray-300 hover:bg-gray-800"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">
-                        {getServerName(player.guildId)}
-                      </span>
-                      {player.playing && (
-                        <div className="flex space-x-1">
-                          <div className="w-1 h-3 bg-red-500 rounded animate-pulse"></div>
-                          <div
-                            className="w-1 h-3 bg-red-500 rounded animate-pulse"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                          <div
-                            className="w-1 h-3 bg-red-500 rounded animate-pulse"
-                            style={{ animationDelay: "0.4s" }}
-                          ></div>
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="px-4 pb-4 border-t border-stone-800 pt-4 absolute bottom-0 w-full">
-              <div className="space-y-3 text-sm text-gray-400">
-                {[
-                  { label: "Servers", value: botStatus?.guilds || 0 },
-                  { label: "Users", value: botStatus?.users || 0 },
-                  { label: "Players", value: botStatus?.players || 0 },
-                  {
-                    label: "Nodes",
-                    value:
-                      botStatus?.nodes.filter((n) => n.connected).length || 0,
-                    className: botStatus?.nodes.some((n) => n.connected)
-                      ? "text-green-400"
-                      : "text-red-400",
-                  },
-                ].map((item, index) => (
-                  <div
-                    key={index}
-                    className={`flex justify-between ${
-                      item.className ? "" : ""
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    <span className={item.className || ""}>{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
-        ) : (
-          <aside className=" border-r border-stone-800 relative">
-            <div className="p-2">
-              <nav className=" flex flex-col gap-2">
-                <button
-                  onClick={() => setActiveView("player")}
-                  className={`text-left px-3 py-2 rounded-lg flex-col flex items-center justify-center transition-colors ${
-                    activeView === "player"
-                      ? "bg-neutral-800 text-slate-200"
-                      : "text-gray-300 hover:bg-neutral-900"
-                  }`}
-                >
-                  <Music className=" h-6 w-6 inline" />
-                  <span className="text-xs">Player</span>
-                </button>
-                <button
-                  onClick={() => setActiveView("servers")}
-                  className={` text-left px-3 py-2 rounded-lg flex-col flex items-center justify-center transition-colors ${
-                    activeView === "servers"
-                      ? "bg-neutral-800 text-white"
-                      : "text-slate-300 hover:bg-neutral-900"
-                  }`}
-                >
-                  <Server className="h-6 w-6 inline" />
-                  <span className="text-xs">Servers</span>
-                </button>
-              </nav>
-            </div>
-
-            {/* Server List */}
-            <div className="px-4 mt-4 pb-4">
-              <h3 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider">
-                Active
-              </h3>
-              <div className="space-y-2">
-                {players.map((player) => (
-                  <button
-                    key={player.guildId}
-                    onClick={() => setSelectedGuild(player.guildId)}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
-                      selectedGuild === player.guildId
-                        ? "bg-red-600 text-white"
-                        : "text-gray-300 hover:bg-gray-800"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">
-                        {getServerName(player.guildId)?.charAt(0)}
-                      </span>
-                      {player.playing && (
-                        <div className="flex space-x-1">
-                          <div className="w-1 h-3 bg-red-500 rounded animate-pulse"></div>
-                          <div
-                            className="w-1 h-3 bg-red-500 rounded animate-pulse"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                          <div
-                            className="w-1 h-3 bg-red-500 rounded animate-pulse"
-                            style={{ animationDelay: "0.4s" }}
-                          ></div>
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Stats */}
-            <div className="px-4 pb-4 flex flex-col border-t border-stone-800 pt-4 absolute bottom-0 w-full">
-              <div className="flex flex-col gap-2 text-sm text-gray-400">
-                {stats.map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-4 justify-center space-y-1"
-                  >
-                    <div>{item.icon}</div>
-                    <div className={item.className || ""}>{item.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
-        )}
+        <Sidebar
+          isSidebarOpen={isSidebarOpen}
+          activeView={activeView}
+          setActiveView={setActiveView}
+          players={players}
+          selectedGuild={selectedGuild}
+          setSelectedGuild={setSelectedGuild}
+          getServerName={getServerName}
+          botStatus={botStatus}
+          stats={stats}
+        />
 
         {/* Main Content */}
         <main className="flex-1 flex flex-col">
@@ -560,234 +385,23 @@ export default function Dashboard() {
           {activeView === "player" && currentPlayer && (
             <div className="flex-1 flex">
               {/* Player Content */}
-              <div className="flex-1 p-6">
-                {currentPlayer.current ? (
-                  <div className="flex-1 flex h-full flex-col  text-white relative">
-                    {/* Fullscreen Image Background */}
-                    <div className="flex-1 flex items-center justify-center z-0">
-                      <Image
-                        src={
-                          currentPlayer.current.thumbnail || "/placeholder.svg"
-                        }
-                        alt="Album Art"
-                        width={300}
-                        height={300}
-                        className="rounded-xl bg-cover shadow-2xl object-cover max-w-96 h-auto"
-                      />
-                    </div>
+              <MusicPlayerCard
+                currentPlayer={currentPlayer}
+                volume={volume}
+                isMuted={isMuted}
+                setVolume={handleVolumeChange}
+                toggleMute={toggleMute}
+                seekToPosition={seekToPosition}
+                controlPlayer={controlPlayer}
+                formatTime={formatTime}
+                loading={loading}
+                setIsSeekingTimeline={setIsSeekingTimeline}
+                selectedGuild={selectedGuild}
+                fatchPlayers={fetchPlayers}
+              />
 
-                    {/* Foreground Content */}
-                    <div className="z-10 flex-1 flex flex-col justify-end px-6 pb-8">
-                      <div className="max-w-4xl mx-auto space-y-4">
-                        {/* Song Info */}
-                        <div>
-                          <h1 className="text-4xl font-bold">
-                            {currentPlayer.current.title}
-                          </h1>
-                          <p className="text-lg text-gray-300">
-                            {currentPlayer.current.author}
-                          </p>
-                        </div>
-
-                        {/* Controls */}
-                        <div className="flex justify-center items-center space-x-4 mt-4">
-                          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
-                            <Shuffle className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => controlPlayer("previous")}
-                            className="p-3 hover:bg-gray-800 rounded-full transition-colors"
-                          >
-                            <SkipBack className="h-6 w-6" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              controlPlayer(
-                                currentPlayer.paused ? "play" : "pause"
-                              )
-                            }
-                            disabled={loading}
-                            className="p-4 bg-red-600 hover:bg-red-700 rounded-full transition-colors disabled:opacity-50"
-                          >
-                            {currentPlayer.paused ? (
-                              <Play className="h-8 w-8 ml-1" />
-                            ) : (
-                              <Pause className="h-8 w-8" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => controlPlayer("skip")}
-                            disabled={loading}
-                            className="p-3 hover:bg-gray-800 rounded-full transition-colors"
-                          >
-                            <SkipForward className="h-6 w-6" />
-                          </button>
-                          <button className="p-2 hover:bg-gray-800 rounded-full transition-colors">
-                            <Repeat className="h-5 w-5" />
-                          </button>
-                        </div>
-
-                        {/* Timeline */}
-                        <div className="flex items-center space-x-3 w-full">
-                          <span className="text-sm text-gray-400 w-12 text-right">
-                            {formatTime(currentPlayer.position)}
-                          </span>
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={
-                              (currentPlayer.position /
-                                currentPlayer.current.duration) *
-                              100
-                            }
-                            onChange={(e) => {
-                              setIsSeekingTimeline(true);
-                              seekToPosition(Number(e.target.value));
-                              setTimeout(
-                                () => setIsSeekingTimeline(false),
-                                1000
-                              );
-                            }}
-                            className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                            style={{
-                              background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${
-                                (currentPlayer.position /
-                                  currentPlayer.current.duration) *
-                                100
-                              }%, #374151 ${
-                                (currentPlayer.position /
-                                  currentPlayer.current.duration) *
-                                100
-                              }%, #374151 100%)`,
-                            }}
-                          />
-                          <span className="text-sm text-gray-400 w-12">
-                            {formatTime(currentPlayer.current.duration)}
-                          </span>
-                        </div>
-
-                        {/* Volume */}
-                        <div className="flex items-center justify-center space-x-3 mt-4">
-                          <button
-                            onClick={toggleMute}
-                            className="p-2 hover:bg-gray-800 rounded-full"
-                          >
-                            {isMuted ? (
-                              <VolumeX className="h-5 w-5" />
-                            ) : (
-                              <Volume2 className="h-5 w-5" />
-                            )}
-                          </button>
-                          <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={isMuted ? 0 : volume}
-                            onChange={(e) =>
-                              handleVolumeChange(Number(e.target.value))
-                            }
-                            className="w-32 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                            style={{
-                              background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${
-                                isMuted ? 0 : volume
-                              }%, #374151 ${
-                                isMuted ? 0 : volume
-                              }%, #374151 100%)`,
-                            }}
-                          />
-                          <span className="text-sm text-gray-400 w-8 text-right">
-                            {isMuted ? 0 : volume}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                      <Music className="h-24 w-24 mx-auto text-gray-600 mb-4" />
-                      <h2 className="text-2xl font-semibold text-gray-300 mb-2">
-                        No music playing
-                      </h2>
-                      <p className="text-gray-500">
-                        Use Discord commands to start playing music
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Queue Sidebar */}
-              <div className="w-80">
-                <div className="mb-4">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Search className="h-4 w-4 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search songs..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter" && searchQuery.trim()) {
-                          controlPlayer("play", searchQuery);
-                          setSearchQuery("");
-                        }
-                      }}
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-red-500"
-                    />
-                    <button
-                      onClick={() => {
-                        if (searchQuery.trim()) {
-                          controlPlayer("play", searchQuery);
-                          setSearchQuery("");
-                        }
-                      }}
-                      disabled={!searchQuery.trim()}
-                      className="p-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-700 rounded-lg transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-3">
-                    Queue ({currentPlayer?.queue.length || 0})
-                  </h3>
-
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {currentPlayer?.queue.map((track, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center space-x-3 p-2 hover:bg-gray-800 rounded-lg transition-colors"
-                      >
-                        <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center text-xs text-gray-400">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">
-                            {track.title}
-                          </p>
-                          <p className="text-xs text-gray-400 truncate">
-                            {track.author}
-                          </p>
-                        </div>
-                        <span className="text-xs text-gray-500">
-                          {formatTime(track.duration)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {!currentPlayer?.queue.length && (
-                    <div className="text-center py-8">
-                      <Music className="h-12 w-12 mx-auto text-gray-600 mb-2" />
-                      <p className="text-gray-500 text-sm">Queue is empty</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              
+              
             </div>
           )}
 
