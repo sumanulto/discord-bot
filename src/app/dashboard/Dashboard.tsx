@@ -88,7 +88,7 @@ export default function Dashboard() {
         // Pass the latest selectedGuild from the ref to the fetchPlayers function
         fetchPlayers(selectedGuildRef.current);
       }
-    }, 2000)
+    }, 500)
     return () => clearInterval(interval)
   }, [isSeekingTimeline]) // This useEffect now only depends on isSeekingTimeline
 
@@ -221,6 +221,16 @@ export default function Dashboard() {
       } else {
         setError("")
         setTimeout(fetchPlayers, 500) // Calls fetchPlayers without an argument, using state's selectedGuild
+      }
+
+      // Specifically for seek action, update position immediately for smoother UI
+      if (action === "seek" && response.ok && query !== undefined) {
+        const newPosition = parseInt(query, 10);
+        setPlayers(prevPlayers =>
+          prevPlayers.map(player =>
+            player.guildId === selectedGuild ? { ...player, position: newPosition } : player
+          )
+        );
       }
     } catch (error) {
       console.error("Failed to control player:", error)

@@ -1,12 +1,11 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { botManager } from "@/lib/bot-manager"
+import { playerSettings, RepeatMode } from "@/lib/playerSettings"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, guildId, query, index } = body
-
-    console.log("Control request:", { action, guildId, query, index })
+    const { action, guildId, query, index, enabled, mode } = body
 
     if (!botManager.hasBot()) {
       return NextResponse.json({ error: "Bot not online" }, { status: 503 })
@@ -19,6 +18,10 @@ export async function POST(request: NextRequest) {
     if (!player) {
       return NextResponse.json({ error: "No active player found for this server" }, { status: 404 })
     }
+
+    // Initialize settings if missing
+    const settings = playerSettings.get(guildId) ?? { shuffleEnabled: false, repeatMode: "off" }
+    playerSettings.set(guildId, settings)
 
     switch (action) {
       case "play":
@@ -102,13 +105,8 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "Invalid track index" }, { status: 400 })
         }
 
-        // Get the track at the specified index
         const trackToMoveNext = player.queue[index]
-
-        // Remove the track from its current position
         player.queue.splice(index, 1)
-
-        // Add it to the front of the queue (position 0)
         player.queue.unshift(trackToMoveNext)
 
         return NextResponse.json({
@@ -121,15 +119,46 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: "Invalid track index" }, { status: 400 })
         }
 
-        // Get the track to be removed
         const trackToRemove = player.queue[index]
-
-        // Remove the track from the queue
         player.queue.splice(index, 1)
 
         return NextResponse.json({
           success: true,
           message: `Removed "${trackToRemove.title}" from queue`,
+        })
+
+      case "shuffle":
+        if (typeof enabled !== "boolean") {
+          return NextResponse.json({ error: "Missing or invalid 'enabled' flag for shuffle" }, { status: 400 })
+        }
+
+        settings.shuffleEnabled = enabled
+
+        if (settings.shuffleEnabled) {
+          // Shuffle queue in place (Fisher-Yates)
+          for (let i = player.queue.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1))
+              ;[player.queue[i], player.queue[j]] = [player.queue[j], player.queue[i]]
+          }
+        } else {
+          // Optional: you can restore original queue order if you save it somewhere
+        }
+
+        playerSettings.set(guildId, settings)
+        return NextResponse.json({
+          success: true,
+          message: `Shuffle ${settings.shuffleEnabled ? "enabled" : "disabled"}`,
+        })
+
+      case "repeat":
+        if (!["off", "one", "all"].includes(mode)) {
+          return NextResponse.json({ error: "Invalid repeat mode" }, { status: 400 })
+        }
+        settings.repeatMode = mode as RepeatMode
+        playerSettings.set(guildId, settings)
+        return NextResponse.json({
+          success: true,
+          message: `Repeat mode set to ${settings.repeatMode}`,
         })
 
       default:
