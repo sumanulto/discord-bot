@@ -31,6 +31,11 @@ import { playerControlsCommand, handlePlayerControls } from "@/lib/commands/play
 import { buttonPlayPause } from "@/lib/buttons/buttonPlayPause";
 import { buttonSkip } from "@/lib/buttons/buttonSkip";
 import { buttonPrevious } from "@/lib/buttons/buttonPrevious";
+import { buttonShuffle } from "@/lib/buttons/buttonShuffle";
+import { buttonRepeat } from "@/lib/buttons/buttonRepeat";
+import { buttonStop } from "@/lib/buttons/buttonStop";
+import { buttonVolumeUp } from "@/lib/buttons/buttonVolumeUp";
+import { buttonVolumeDown } from "@/lib/buttons/buttonVolumeDown";
 
 export class DiscordMusicBot {
   private client: Client;
@@ -93,6 +98,21 @@ export class DiscordMusicBot {
             break;
           case "player_previous":
             await buttonPrevious(interaction, this.kazagumo);
+            break;
+          case "player_shuffle":
+            await buttonShuffle(interaction, this.kazagumo);
+            break;
+          case "player_repeat":
+            await buttonRepeat(interaction, this.kazagumo);
+            break;
+          case "player_stop":
+            await buttonStop(interaction, this.kazagumo);
+            break;
+          case "player_volumeup":
+            await buttonVolumeUp(interaction, this.kazagumo);
+            break;
+          case "player_volumedown":
+            await buttonVolumeDown(interaction, this.kazagumo);
             break;
         }
       }

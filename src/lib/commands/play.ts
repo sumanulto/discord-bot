@@ -40,6 +40,6 @@ export async function playCommand(
     await player.play();
   }
 
-  // Send player controls after adding a song
-  await handlePlayerControls(interaction);
+  // Always show player controls after adding a song
+  await handlePlayerControls(interaction, player);
 }

@@ -13,6 +13,7 @@ import {
   VolumeX,
   Shuffle,
   Repeat,
+  Repeat1,
   Heart,
   Download,
   MicVocal,
@@ -59,22 +60,20 @@ export default function PlayerCard({
   const [justSeeked, setJustSeeked] = useState(false);
   const [seekTarget, setSeekTarget] = useState<number | null>(null);
 
-  // New state for shuffle and repeat modes
+  // New state for shuffle mode
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<"off" | "one" | "all">("off");
 
   const localProgressInterval = useRef<NodeJS.Timeout | null>(null);
   const hideVolumeSliderTimeout = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateTime = useRef<number | null>(null);
 
-  // Initialize shuffle/repeat from playerSettings or fetch on mount
+  // Initialize shuffle from playerSettings or fetch on mount
   useEffect(() => {
     // You might want to fetch these settings from your backend or context
     // For example, from currentPlayer or an API call:
     // Assuming currentPlayer.settings.shuffleEnabled and repeatMode are available:
     if (currentPlayer.settings) {
       setShuffleEnabled(currentPlayer.settings.shuffleEnabled ?? false);
-      setRepeatMode(currentPlayer.settings.repeatMode ?? "off");
     }
   }, [currentPlayer]);
 
@@ -112,8 +111,7 @@ export default function PlayerCard({
       });
       const data = await response.json();
       if (response.ok) {
-        setRepeatMode(newMode);
-        fetchPlayers();
+        fetchPlayers(); // Always fetch latest state from backend
       } else {
         console.error(data.error);
       }
@@ -340,6 +338,9 @@ export default function PlayerCard({
     );
   }
 
+  // Use repeatMode from currentPlayer.settings
+  const repeatMode: "off" | "one" | "all" = currentPlayer.settings?.repeatMode ?? "off";
+
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] w-full text-white">
       {/* Hidden silent audio element for media session priming */}
@@ -472,7 +473,13 @@ export default function PlayerCard({
                 }`}
                 title={`Repeat: ${repeatMode}`}
               >
-                <Repeat className="h-5 w-5" />
+                {repeatMode === "all" ? (
+                  <Repeat className="h-6 w-6" />
+                ) : repeatMode === "one" ? (
+                  <Repeat1 className="h-6 w-6" />
+                ) : (
+                  <Repeat className="h-6 w-6" />
+                )}
               </button>
             </div>
 

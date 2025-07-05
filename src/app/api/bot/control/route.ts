@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { botManager } from "@/lib/bot-manager"
 import { playerSettings, RepeatMode } from "@/lib/playerSettings"
+import { handlePlayerControls } from "@/lib/commands/playerControls";
+import { ChatInputCommandInteraction } from "discord.js";
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,11 +25,32 @@ export async function POST(request: NextRequest) {
     const settings = playerSettings.get(guildId) ?? { shuffleEnabled: false, repeatMode: "off" }
     playerSettings.set(guildId, settings)
 
+    // Helper to update Discord player controls
+    async function updateDiscordPlayerControls() {
+      // Find a text channel to send the controls to
+      const client = bot.getClient();
+      const guild = client.guilds.cache.get(guildId);
+      if (!guild) return;
+      const textChannel = guild.channels.cache.get(player.textId);
+      if (!textChannel || textChannel.type !== 0) return;
+      // Fake a ChatInputCommandInteraction-like object
+      const fakeInteraction = {
+        guildId,
+        channel: textChannel,
+        replied: false,
+        deferred: false,
+        reply: (options: any) => textChannel.send(options),
+        followUp: (options: any) => textChannel.send(options),
+      } as unknown as ChatInputCommandInteraction;
+      await handlePlayerControls(fakeInteraction, player);
+    }
+
     switch (action) {
       case "play":
         if (query) {
           try {
             const track = await bot.searchAndPlay(guildId, query, { id: 'dashboard', username: 'Dashboard User' });
+            await updateDiscordPlayerControls();
             return NextResponse.json({
               success: true,
               message: `Added "${track.title}" to queue`,
@@ -42,12 +65,14 @@ export async function POST(request: NextRequest) {
           }
         } else {
           await player.pause(false)
+          await updateDiscordPlayerControls();
           return NextResponse.json({ success: true, message: "Resumed playback" })
         }
 
       case "pause":
         if (player.playing) {
           await player.pause(true)
+          await updateDiscordPlayerControls();
           return NextResponse.json({ success: true, message: "Paused playback" })
         } else {
           return NextResponse.json({ error: "Nothing is playing" }, { status: 400 })
@@ -57,6 +82,7 @@ export async function POST(request: NextRequest) {
         if (player.queue.current) {
           const currentTrack = player.queue.current.title
           await player.skip()
+          await updateDiscordPlayerControls();
           return NextResponse.json({ success: true, message: `Skipped "${currentTrack}"` })
         } else {
           return NextResponse.json({ error: "Nothing is playing" }, { status: 400 })
@@ -67,6 +93,7 @@ export async function POST(request: NextRequest) {
           const previousTrack = player.queue.previous[player.queue.previous.length - 1]
           player.queue.unshift(previousTrack)
           await player.skip()
+          await updateDiscordPlayerControls();
           return NextResponse.json({ success: true, message: "Playing previous track" })
         } else {
           return NextResponse.json({ error: "No previous track available" }, { status: 400 })
@@ -162,6 +189,7 @@ export async function POST(request: NextRequest) {
         else if (mode === "all") kazagumoMode = "queue";
         else kazagumoMode = "none";
         player.setLoop(kazagumoMode);
+        await updateDiscordPlayerControls();
         return NextResponse.json({
           success: true,
           message: `Repeat mode set to ${settings.repeatMode}`,
