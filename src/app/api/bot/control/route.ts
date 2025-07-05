@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
       const client = bot.getClient();
       const guild = client.guilds.cache.get(guildId);
       if (!guild) return;
+      if (!player || typeof player.textId !== "string") return;
       const textChannel = guild.channels.cache.get(player.textId);
       if (!textChannel || textChannel.type !== 0) return;
       // Fake a ChatInputCommandInteraction-like object
@@ -39,8 +40,8 @@ export async function POST(request: NextRequest) {
         channel: textChannel,
         replied: false,
         deferred: false,
-        reply: (options: any) => textChannel.send(options),
-        followUp: (options: any) => textChannel.send(options),
+        reply: (options: string | import("discord.js").MessagePayload) => textChannel.send(options),
+        followUp: (options: string | import("discord.js").MessagePayload) => textChannel.send(options),
       } as unknown as ChatInputCommandInteraction;
       await handlePlayerControls(fakeInteraction, player);
     }
@@ -168,7 +169,8 @@ export async function POST(request: NextRequest) {
               ;[player.queue[i], player.queue[j]] = [player.queue[j], player.queue[i]]
           }
         } else {
-          // Optional: you can restore original queue order if you save it somewhere
+          // Reset to original order (if needed, but usually not necessary)
+          player.queue.sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
         }
 
         playerSettings.set(guildId, settings)

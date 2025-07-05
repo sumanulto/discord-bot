@@ -15,7 +15,7 @@ export async function queueCommand(
 
   const queue = player.queue;
   const current = queue.current;
-  const upcoming = queue.slice(0, 10);
+  const upcoming = queue.slice(0, 50); // Show up to 50 tracks, or remove limit for all
 
   const embed = {
     title: "🎵 Current Queue",

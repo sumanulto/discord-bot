@@ -13,7 +13,7 @@ export async function GET() {
 
     const players = Array.from(kazagumo.players.values()).map((player) => {
       const current = player.queue.current
-      const queue = player.queue.slice(0, 10)
+      const queue = player.queue; // Remove .slice(0, 10) to return all tracks
       const settings = playerSettings.get(player.guildId) ?? { shuffleEnabled: false, repeatMode: "off" };
 
       return {
