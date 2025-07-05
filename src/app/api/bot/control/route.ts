@@ -156,6 +156,12 @@ export async function POST(request: NextRequest) {
         }
         settings.repeatMode = mode as RepeatMode
         playerSettings.set(guildId, settings)
+        // Map UI mode to Kazagumo mode
+        let kazagumoMode: "none" | "track" | "queue" = "none";
+        if (mode === "one") kazagumoMode = "track";
+        else if (mode === "all") kazagumoMode = "queue";
+        else kazagumoMode = "none";
+        player.setLoop(kazagumoMode);
         return NextResponse.json({
           success: true,
           message: `Repeat mode set to ${settings.repeatMode}`,

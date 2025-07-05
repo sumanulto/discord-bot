@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { botManager } from "@/lib/bot-manager"
+import { playerSettings } from "@/lib/playerSettings"
 
 export async function GET() {
   try {
@@ -13,6 +14,7 @@ export async function GET() {
     const players = Array.from(kazagumo.players.values()).map((player) => {
       const current = player.queue.current
       const queue = player.queue.slice(0, 10)
+      const settings = playerSettings.get(player.guildId) ?? { shuffleEnabled: false, repeatMode: "off" };
 
       return {
         guildId: player.guildId,
@@ -37,6 +39,10 @@ export async function GET() {
           author: track.author,
           duration: track.length || 0,
         })),
+        settings: {
+          shuffleEnabled: settings.shuffleEnabled,
+          repeatMode: settings.repeatMode,
+        },
       }
     })
 

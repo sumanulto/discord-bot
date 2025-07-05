@@ -52,11 +52,12 @@ export default function PlayerCard({
   fetchPlayers,
 }: PlayerCardProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("queue");
   const [isSearching, setIsSearching] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<number | null>(null);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [localProgress, setLocalProgress] = useState(0);
+  const [justSeeked, setJustSeeked] = useState(false);
+  const [seekTarget, setSeekTarget] = useState<number | null>(null);
 
   // New state for shuffle and repeat modes
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
@@ -64,6 +65,7 @@ export default function PlayerCard({
 
   const localProgressInterval = useRef<NodeJS.Timeout | null>(null);
   const hideVolumeSliderTimeout = useRef<NodeJS.Timeout | null>(null);
+  const lastUpdateTime = useRef<number | null>(null);
 
   // Initialize shuffle/repeat from playerSettings or fetch on mount
   useEffect(() => {
@@ -184,19 +186,38 @@ export default function PlayerCard({
   const prevSelectedGuild = useRef<string | null>(null);
 
   useEffect(() => {
-    if (selectedGuild !== prevSelectedGuild.current && currentPlayer.position !== undefined) {
+    // Only update localProgress from backend if not justSeeked,
+    // or if backend has caught up to the seek target
+    if (justSeeked && seekTarget !== null) {
+      // If backend is close to seek target, update and clear justSeeked
+      if (Math.abs(currentPlayer.position - seekTarget) < 1000) {
+        setLocalProgress(currentPlayer.position);
+        setJustSeeked(false);
+        setSeekTarget(null);
+      }
+      // Otherwise, don't update localProgress
+      return;
+    }
+    // Always sync to backend position if available
+    if (currentPlayer.position !== undefined && currentPlayer.position !== null) {
       setLocalProgress(currentPlayer.position);
-    } else { setLocalProgress(0); }
+    }
     prevSelectedGuild.current = selectedGuild;
-  }, [currentPlayer.current?.uri, selectedGuild]);
+  }, [currentPlayer.current?.uri, selectedGuild, currentPlayer.position, justSeeked, seekTarget]);
 
   useEffect(() => {
+    if (justSeeked) return; // Don't sync from backend right after seeking
     if (currentPlayer.current && !currentPlayer.paused && !isSeekingTimeline) {
       if (localProgressInterval.current) clearInterval(localProgressInterval.current);
-
+      lastUpdateTime.current = performance.now();
       localProgressInterval.current = setInterval(() => {
-        setLocalProgress((prev) => prev + 100);
-      }, 100);
+        if (lastUpdateTime.current !== null) {
+          const now = performance.now();
+          const elapsed = now - lastUpdateTime.current;
+          setLocalProgress((prev) => prev + elapsed);
+          lastUpdateTime.current = now;
+        }
+      }, 50); // update every 50ms for smoothness
 
       const syncInterval = setInterval(() => {
         setLocalProgress(currentPlayer.position);
@@ -206,6 +227,7 @@ export default function PlayerCard({
         if (localProgressInterval.current) clearInterval(localProgressInterval.current);
         clearInterval(syncInterval);
         localProgressInterval.current = null;
+        lastUpdateTime.current = null;
       };
     } else {
       if (localProgressInterval.current) {
@@ -213,14 +235,90 @@ export default function PlayerCard({
         localProgressInterval.current = null;
       }
       setLocalProgress(currentPlayer.position);
+      lastUpdateTime.current = null;
     }
-  }, [
-    currentPlayer.current,
-    currentPlayer.paused,
-    currentPlayer.position,
-    currentPlayer.current?.duration,
-    isSeekingTimeline,
-  ]);
+  }, [currentPlayer, isSeekingTimeline, justSeeked]);
+
+  // End justSeeked early if backend catches up
+  useEffect(() => {
+    if (justSeeked && seekTarget !== null) {
+      if (Math.abs(currentPlayer.position - seekTarget) < 1000) { // within 1s
+        setJustSeeked(false);
+        setSeekTarget(null);
+      }
+    }
+  }, [currentPlayer.position, justSeeked, seekTarget]);
+
+  // Media Session API integration for browser media keys
+  useEffect(() => {
+    if (typeof window === "undefined" || !('mediaSession' in navigator)) return;
+    if (!currentPlayer.current) return;
+
+    navigator.mediaSession.metadata = new window.MediaMetadata({
+      title: currentPlayer.current.title,
+      artist: currentPlayer.current.author,
+      artwork: [
+        { src: currentPlayer.current.thumbnail || "/placeholder.svg", sizes: "300x300", type: "image/png" },
+      ],
+    });
+
+    navigator.mediaSession.setActionHandler("play", () => {
+      controlPlayer("play");
+      navigator.mediaSession.playbackState = "playing";
+    });
+    navigator.mediaSession.setActionHandler("pause", () => {
+      controlPlayer("pause");
+      navigator.mediaSession.playbackState = "paused";
+    });
+    navigator.mediaSession.setActionHandler("previoustrack", () => {
+      controlPlayer("previous");
+    });
+    navigator.mediaSession.setActionHandler("nexttrack", () => {
+      controlPlayer("skip");
+    });
+
+    // Set playback state for better browser integration
+    navigator.mediaSession.playbackState = currentPlayer.paused ? "paused" : "playing";
+
+    return () => {
+      navigator.mediaSession.setActionHandler("play", null);
+      navigator.mediaSession.setActionHandler("pause", null);
+      navigator.mediaSession.setActionHandler("previoustrack", null);
+      navigator.mediaSession.setActionHandler("nexttrack", null);
+    };
+  }, [currentPlayer.current, currentPlayer.paused, controlPlayer]);
+
+  // --- Media Session Activation: Play silent audio on first user interaction ---
+  const silentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [mediaPrimed, setMediaPrimed] = useState(false);
+
+  // Create a silent audio element only once
+  useEffect(() => {
+    if (!silentAudioRef.current) {
+      const audio = document.createElement("audio");
+      // 1 second of silence (WAV data URI)
+      audio.src =
+        "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+      audio.loop = false;
+      audio.volume = 0;
+      audio.preload = "auto";
+      silentAudioRef.current = audio;
+    }
+  }, []);
+
+  // Play a silent audio to prime the media session (browser recognizes as media source)
+  const primeMediaSession = () => {
+    if (!mediaPrimed && silentAudioRef.current) {
+      silentAudioRef.current.play().catch(() => {});
+      setMediaPrimed(true);
+    }
+  };
+
+  // Wrap all playback-related UI controls to prime the media session
+  const handleControlPlayer = (action: string, query?: string) => {
+    primeMediaSession();
+    controlPlayer(action, query);
+  };
 
   if (!currentPlayer.current) {
     return (
@@ -236,6 +334,13 @@ export default function PlayerCard({
 
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] w-full text-white">
+      {/* Hidden silent audio element for media session priming */}
+      <audio
+        ref={silentAudioRef}
+        src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA="
+        preload="auto"
+        style={{ display: "none" }}
+      />
       <div className="flex flex-1 overflow-hidden justify-between">
         <div className="flex items-center w-full justify-center p-4 min-w-[300px]">
           <Image
@@ -278,14 +383,24 @@ export default function PlayerCard({
             value={localProgress}
             disabled={loading}
             onChange={(e) => {
+              primeMediaSession();
               const newPositionMs = Number(e.target.value);
               setIsSeekingTimeline(true);
               setLocalProgress(newPositionMs); // Immediately reflect visually
+              setJustSeeked(true);
+              setSeekTarget(newPositionMs);
               seekToPosition(
                 (newPositionMs / currentPlayer.current.duration) * 100,
                 newPositionMs
               );
-              setTimeout(() => setIsSeekingTimeline(false), 1000);
+              setTimeout(() => {
+                setIsSeekingTimeline(false);
+              }, 1000);
+              // Fallback: force justSeeked false after 3s
+              setTimeout(() => {
+                setJustSeeked(false);
+                setSeekTarget(null);
+              }, 3000);
             }}
             className="w-full h-1 bg-gray-700 appearance-none cursor-pointer"
             style={{
@@ -319,13 +434,13 @@ export default function PlayerCard({
                 <Shuffle className="h-5 w-5" />
               </button>
               <button
-                onClick={() => controlPlayer("previous")}
+                onClick={() => handleControlPlayer("previous")}
                 className="p-3 hover:bg-gray-800 rounded-full transition-colors"
               >
                 <SkipBack className="h-6 w-6" />
               </button>
               <button
-                onClick={() => controlPlayer(currentPlayer.paused ? "play" : "pause")}
+                onClick={() => handleControlPlayer(currentPlayer.paused ? "play" : "pause")}
                 disabled={loading}
                 className="p-4 bg-red-600 hover:bg-red-700 rounded-full transition-colors disabled:opacity-50"
               >
@@ -336,7 +451,7 @@ export default function PlayerCard({
                 )}
               </button>
               <button
-                onClick={() => controlPlayer("skip")}
+                onClick={() => handleControlPlayer("skip")}
                 disabled={loading}
                 className="p-3 hover:bg-gray-800 rounded-full transition-colors"
               >
@@ -370,7 +485,10 @@ export default function PlayerCard({
                       min={0}
                       max={100}
                       value={isMuted ? 0 : volume}
-                      onChange={(e) => setVolume(Number(e.target.value))}
+                      onChange={(e) => {
+                        primeMediaSession();
+                        setVolume(Number(e.target.value));
+                      }}
                       className="w-32 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
                       style={{
                         background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${

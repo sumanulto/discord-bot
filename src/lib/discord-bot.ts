@@ -24,6 +24,8 @@ import { queueCommand } from "@/lib/commands/queue";
 import { nowPlayingCommand } from "@/lib/commands/nowplaying";
 import { volumeCommand } from "@/lib/commands/volume";
 import { seekCommand } from "@/lib/commands/seek";
+import { repeatCommand } from "@/lib/commands/repeat";
+import { shuffleCommand } from "@/lib/commands/shuffle";
 
 export class DiscordMusicBot {
   private client: Client;
@@ -99,6 +101,12 @@ export class DiscordMusicBot {
         .setName("seek")
         .setDescription("Seek in current song")
         .addIntegerOption((opt) => opt.setName("position").setDescription("In seconds").setRequired(true)),
+      new SlashCommandBuilder()
+        .setName("repeat")
+        .setDescription("Toggle repeat mode for the current queue or track"),
+      new SlashCommandBuilder()
+        .setName("shuffle")
+        .setDescription("Shuffle the current queue"),
     ];
 
     const guildIds = process.env.DISCORD_GUILD_IDS?.split(',') || [];
@@ -114,17 +122,17 @@ export class DiscordMusicBot {
     }
   }
 
-  public async searchAndPlay(guildId: string, query: string, requester: any) {
+  public async searchAndPlay(guildId: string, query: string, requester: import("discord.js").GuildMember) {
     const guild = this.client.guilds.cache.get(guildId);
     if (!guild) {
       throw new Error("Guild not found.");
     }
 
-    let player: any = this.kazagumo.players.get(guildId);
+    let player = this.kazagumo.players.get(guildId);
 
     // If no player, create one (assuming requester is a member object with voice channel)
     if (!player) {
-      const member = requester as any;
+      const member = requester as import("discord.js").GuildMember;
       const voiceChannel: VoiceChannel | null = member?.voice?.channel?.type === 2 ? member.voice.channel : null;
 
       if (!voiceChannel) {
@@ -139,7 +147,7 @@ export class DiscordMusicBot {
         throw new Error("No text channel found in the guild.");
       }
 
-      player = this.kazagumo.createPlayer({
+      player = await this.kazagumo.createPlayer({
         guildId: guild.id,
         textId: textChannel.id,
         voiceId: voiceChannel.id,
@@ -170,7 +178,7 @@ export class DiscordMusicBot {
     if (!guild) return;
 
     const player = this.kazagumo.players.get(guild.id);
-    const member = interaction.member as any;
+    const member = interaction.member as import("discord.js").GuildMember;
     const voiceChannel: VoiceChannel | null = member?.voice?.channel?.type === 2 ? member.voice.channel : null;
 
     switch (interaction.commandName) {
@@ -202,9 +210,15 @@ export class DiscordMusicBot {
       case "seek":
         await seekCommand(interaction, player);
         break;
+      case "repeat":
+        await repeatCommand(interaction, player);
+        break;
+      case "shuffle":
+        await shuffleCommand(interaction, player);
+        break;
     }
 
-    if (!player.playing && !player.paused) {
+    if (player && !player.playing && !player.paused) {
       await player.connect();
       await player.play();
     }
