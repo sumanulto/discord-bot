@@ -20,7 +20,7 @@ export async function GET() {
         guildId: player.guildId,
         voiceChannel: player.voiceId,
         textChannel: player.textId,
-        connected: player.shoukaku.state === 2,
+        connected: !!player.voiceId, // More robust: true if bot is in a voice channel
         playing: player.playing,
         paused: player.paused,
         position: player.shoukaku.position || 0,

@@ -286,7 +286,7 @@ export default function PlayerCard({
       navigator.mediaSession.setActionHandler("previoustrack", null);
       navigator.mediaSession.setActionHandler("nexttrack", null);
     };
-  }, [currentPlayer.current, currentPlayer.paused, controlPlayer]);
+  }, [currentPlayer, controlPlayer]);
 
   // --- Media Session Activation: Play silent audio on first user interaction ---
   const silentAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -320,13 +320,21 @@ export default function PlayerCard({
     controlPlayer(action, query);
   };
 
-  if (!currentPlayer.current) {
+  if (!currentPlayer.current || !currentPlayer.connected) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <Music className="h-24 w-24 mx-auto text-gray-600 mb-4" />
-          <h2 className="text-2xl font-semibold text-gray-300 mb-2">No music playing</h2>
-          <p className="text-gray-500">Use Discord commands to start playing music</p>
+          <h2 className="text-2xl font-semibold text-gray-300 mb-2">
+            {currentPlayer.connected === false
+              ? "Bot is not in a voice channel"
+              : "No music playing"}
+          </h2>
+          <p className="text-gray-500">
+            {currentPlayer.connected === false
+              ? "Use /join to invite the bot to your voice channel."
+              : "Use Discord commands to start playing music"}
+          </p>
         </div>
       </div>
     );

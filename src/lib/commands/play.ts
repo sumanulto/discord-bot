@@ -1,5 +1,6 @@
 import { ChatInputCommandInteraction, VoiceChannel } from "discord.js";
 import { Kazagumo, KazagumoPlayer } from "kazagumo";
+import { handlePlayerControls } from "@/lib/commands/playerControls";
 
 export async function playCommand(
   interaction: ChatInputCommandInteraction,
@@ -38,4 +39,7 @@ export async function playCommand(
   if (!player.playing && !player.paused) {
     await player.play();
   }
+
+  // Send player controls after adding a song
+  await handlePlayerControls(interaction);
 }

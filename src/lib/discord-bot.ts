@@ -26,6 +26,11 @@ import { volumeCommand } from "@/lib/commands/volume";
 import { seekCommand } from "@/lib/commands/seek";
 import { repeatCommand } from "@/lib/commands/repeat";
 import { shuffleCommand } from "@/lib/commands/shuffle";
+import { joinCommand } from "@/lib/commands/join";
+import { playerControlsCommand, handlePlayerControls } from "@/lib/commands/playerControls";
+import { buttonPlayPause } from "@/lib/buttons/buttonPlayPause";
+import { buttonSkip } from "@/lib/buttons/buttonSkip";
+import { buttonPrevious } from "@/lib/buttons/buttonPrevious";
 
 export class DiscordMusicBot {
   private client: Client;
@@ -76,8 +81,21 @@ export class DiscordMusicBot {
     });
 
     this.client.on("interactionCreate", async (interaction) => {
-      if (!interaction.isChatInputCommand()) return;
-      await this.handleCommand(interaction);
+      if (interaction.isChatInputCommand()) {
+        await this.handleCommand(interaction);
+      } else if (interaction.isButton()) {
+        switch (interaction.customId) {
+          case "player_playpause":
+            await buttonPlayPause(interaction, this.kazagumo);
+            break;
+          case "player_skip":
+            await buttonSkip(interaction, this.kazagumo);
+            break;
+          case "player_previous":
+            await buttonPrevious(interaction, this.kazagumo);
+            break;
+        }
+      }
     });
   }
 
@@ -107,6 +125,10 @@ export class DiscordMusicBot {
       new SlashCommandBuilder()
         .setName("shuffle")
         .setDescription("Shuffle the current queue"),
+      new SlashCommandBuilder()
+        .setName("join")
+        .setDescription("Join your voice channel without playing music"),
+      playerControlsCommand,
     ];
 
     const guildIds = process.env.DISCORD_GUILD_IDS?.split(',') || [];
@@ -215,6 +237,12 @@ export class DiscordMusicBot {
         break;
       case "shuffle":
         await shuffleCommand(interaction, player);
+        break;
+      case "join":
+        await joinCommand(interaction, this.kazagumo, voiceChannel);
+        break;
+      case "player":
+        await handlePlayerControls(interaction);
         break;
     }
 
