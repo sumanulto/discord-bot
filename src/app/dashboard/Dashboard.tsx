@@ -16,6 +16,7 @@ import {
   Cpu,
   Users,
 } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog"
 
 interface BotStatus {
   botOnline: boolean
@@ -76,6 +77,9 @@ export default function Dashboard() {
   const [isMuted, setIsMuted] = useState(false)
   const [isSeekingTimeline, setIsSeekingTimeline] = useState(false)
   const [isStateButtonOpen, setIsStateButtonOpen] = useState(false)
+  const [showTerminalDialog, setShowTerminalDialog] = useState(false)
+  const [terminalOutput, setTerminalOutput] = useState("")
+  const [loadingTerminal, setLoadingTerminal] = useState(false)
 
   useEffect(() => {
     fetchBotStatus()
@@ -184,7 +188,7 @@ export default function Dashboard() {
         setPlayers([])
         setError("")
       }
-    } catch (error) {
+    } catch {
       setError("Failed to stop bot")
     }
   }
@@ -325,6 +329,26 @@ export default function Dashboard() {
 
   const currentPlayer = players.find((p) => p.guildId === selectedGuild)
 
+  // Fetch terminal output from backend
+  const fetchTerminalOutput = async () => {
+    setLoadingTerminal(true)
+    try {
+      const response = await fetch("/api/bot/terminal")
+      const text = await response.text()
+      setTerminalOutput(text)
+    } catch {
+      setTerminalOutput("Failed to load terminal output.")
+    } finally {
+      setLoadingTerminal(false)
+    }
+  }
+
+  // Open dialog and fetch terminal output
+  const openTerminalDialog = () => {
+    setShowTerminalDialog(true)
+    fetchTerminalOutput()
+  }
+
   if (!botStatus) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#030202] text-white">
@@ -386,6 +410,13 @@ export default function Dashboard() {
                       <span>{btn.label}</span>
                     </button>
                   ))}
+                  <button
+                    onClick={openTerminalDialog}
+                    className="flex items-center space-x-2 px-3 py-2 hover:bg-slate-200 rounded-lg transition-colors border-t pt-2 mt-2"
+                  >
+                    <span role="img" aria-label="Terminal">🖥️</span>
+                    <span>Show Bot Terminal</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -511,6 +542,26 @@ export default function Dashboard() {
           )}
         </main>
       </div>
+
+      {/* Terminal Dialog/Modal using shadcn/ui Dialog */}
+      <Dialog open={showTerminalDialog} onOpenChange={setShowTerminalDialog}>
+        <DialogContent className="max-w-2xl bg-[#18181b] text-white">
+          <DialogHeader className="flex flex-row items-center justify-between border-b border-neutral-700 pb-2">
+            <DialogTitle className="font-semibold text-lg">Bot Terminal Output</DialogTitle>
+            <DialogClose asChild>
+              <button
+                className="text-gray-400 hover:text-red-500 text-xl font-bold"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </DialogClose>
+          </DialogHeader>
+          <div className="p-2 overflow-auto text-xs font-mono bg-black text-green-400 rounded" style={{ whiteSpace: 'pre-wrap', minHeight: '300px', maxHeight: '50vh' }}>
+            {loadingTerminal ? "Loading..." : terminalOutput}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <style jsx>{`
         .slider::-webkit-slider-thumb {

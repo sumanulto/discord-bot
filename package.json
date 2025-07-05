@@ -10,6 +10,7 @@
     "bot": "tsx src/scripts/start-bot.ts"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.14",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "discord.js": "^14.21.0",
