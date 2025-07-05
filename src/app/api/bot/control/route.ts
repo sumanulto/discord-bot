@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       case "play":
         if (query) {
           try {
-            const track = await bot.searchAndPlay(guildId, query, "dashboard")
+            const track = await bot.searchAndPlay(guildId, query, { id: 'dashboard', username: 'Dashboard User' });
             return NextResponse.json({
               success: true,
               message: `Added "${track.title}" to queue`,

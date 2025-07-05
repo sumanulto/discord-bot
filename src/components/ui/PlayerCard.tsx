@@ -181,9 +181,14 @@ export default function PlayerCard({
     }, 200);
   };
 
+  const prevSelectedGuild = useRef<string | null>(null);
+
   useEffect(() => {
-    setLocalProgress(0);
-  }, [currentPlayer.current?.uri]);
+    if (selectedGuild !== prevSelectedGuild.current && currentPlayer.position !== undefined) {
+      setLocalProgress(currentPlayer.position);
+    } else { setLocalProgress(0); }
+    prevSelectedGuild.current = selectedGuild;
+  }, [currentPlayer.current?.uri, selectedGuild]);
 
   useEffect(() => {
     if (currentPlayer.current && !currentPlayer.paused && !isSeekingTimeline) {
