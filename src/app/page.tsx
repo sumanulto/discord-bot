@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <div className="container mx-auto p-6 space-y-8">
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">Discord Music Bot</h1>
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">KMMusic Bot</h1>
         <p className="text-xl text-gray-600 dark:text-gray-400">A powerful music bot with web dashboard control</p>
         <div className="flex justify-center gap-4">
           <Link href="/dashboard">

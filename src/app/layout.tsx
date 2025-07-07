@@ -8,9 +8,8 @@ import ToasterClient from "@/components/ui/toaster-client"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Discord Music Bot Dashboard",
+  title: "KM Dashboard",
   description: "Control your Discord music bot from the web",
-    generator: 'v0.dev'
 }
 
 export default function RootLayout({

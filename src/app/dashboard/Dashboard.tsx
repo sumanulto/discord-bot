@@ -378,7 +378,7 @@ export default function Dashboard() {
                 <Music2 className="h-6 w-6 text-slate-50 p-1 font-bold border-slate-50 border rounded-full" />
               </div>
 
-              <h1 className="text-2xl font-bold">Discord Music</h1>
+              <h1 className="text-2xl font-bold">Kraftamine Music</h1>
             </div>
           </div>
 
