@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Music2,
-  Server,
-  Settings,
-  Cpu,
-  Users,
-} from "lucide-react";
+import { Music2, Server, Settings, Cpu, Users } from "lucide-react";
 
 import type { ReactNode } from "react";
 
@@ -47,12 +41,12 @@ export default function Sidebar({
 }: SidebarProps) {
   const navButtonBase =
     "transition-colors rounded-md flex items-center justify-center p-2";
-  const activeStyle = "bg-red-600 text-white";
+  const activeStyle = "bg-stone-700 text-white";
   const inactiveStyle = "text-gray-300 hover:bg-neutral-800 hover:text-white";
 
   if (!isSidebarOpen) {
     return (
-      <aside className="w-20 border-r border-stone-800 relative bg-neutral-900 flex flex-col items-center py-4">
+      <aside className="w-20 border-r border-stone-800 relative flex flex-col items-center py-4">
         {/* Collapsed Nav */}
         <nav className="flex flex-col gap-2 w-full px-2">
           {[
@@ -85,11 +79,13 @@ export default function Sidebar({
                 key={player.guildId}
                 onClick={() => setSelectedGuild(player.guildId)}
                 className={`w-full px-1 py-2 rounded-md flex flex-col items-center justify-center transition-colors ${
-                  selectedGuild === player.guildId ? activeStyle : "text-gray-300 hover:bg-gray-800"
+                  selectedGuild === player.guildId
+                    ? "text-slate-50 bg-red-700"
+                    : "text-gray-300 hover:bg-gray-800"
                 }`}
               >
                 {player.playing && (
-                  <div className="flex space-x-0.5 mt-1 h-4 items-end">
+                  <div className="flex space-x-1 mt-1 h-4 items-end">
                     {[0, 0.2, 0.4].map((delay, i) => (
                       <div
                         key={i}
@@ -97,12 +93,14 @@ export default function Sidebar({
                         style={{
                           animationDelay: `${delay}s`,
                           animationDuration: "1s",
-                          transformOrigin: "bottom",
+                          animationIterationCount: "infinite",
+                          transformOrigin: "bottom", // critical for bottom growth
                         }}
                       />
                     ))}
                   </div>
                 )}
+
                 <span className="text-[9px] text-center truncate w-full mt-1">
                   {getServerName(player.guildId)}
                 </span>
@@ -112,12 +110,18 @@ export default function Sidebar({
         </div>
 
         {/* Collapsed Stats */}
-        <div className="px-2 pb-4 border-t border-stone-800 pt-4 absolute bottom-0 w-full">
-          <div className="flex flex-col gap-2 text-sm text-gray-400">
+        <div className="px-2 pb-4 border-t border-stone-800 pt-4 absolute bottom-0 ">
+          <div className="flex flex-col justify-center item-center gap-4 text-sm text-gray-100">
             {stats.map((item, i) => (
-              <div key={i} className="flex items-center justify-center gap-2">
-                <div className="h-4 w-4">{item.icon}</div>
-                <div className={item.className || ""}>{item.value}</div>
+              <div key={i} className="relative justify-center">
+                <div className="text-gray-400">{item.icon}</div>
+                <div
+                  className={`absolute -top-2 -right-2 bg-neutral-50 text-neutral-900 font-extrabold text-xs px-1.5 py-0.5 rounded-full border border-black ${
+                    item.className || ""
+                  }`}
+                >
+                  {item.value}
+                </div>
               </div>
             ))}
           </div>
@@ -128,7 +132,7 @@ export default function Sidebar({
 
   // Expanded Sidebar
   return (
-    <aside className="w-64 bg-neutral-900 border-r border-stone-800 flex flex-col">
+    <aside className="w-64  border-r border-stone-800 flex flex-col">
       {/* Navigation */}
       <nav className="p-4 space-y-2">
         {[
@@ -139,7 +143,7 @@ export default function Sidebar({
           <button
             key={view}
             onClick={() => setActiveView(view)}
-            className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-3 ${
+            className={`w-full text-left px-3 py-2 rounded transition-colors flex items-center space-x-3 ${
               activeView === view ? activeStyle : inactiveStyle
             }`}
           >
@@ -164,9 +168,9 @@ export default function Sidebar({
                 setSelectedGuild(player.guildId);
                 setActiveView("player");
               }}
-              className={`w-full text-left p-3 rounded-lg transition-colors ${
+              className={`w-full text-left p-3 rounded-md transition-colors ${
                 selectedGuild === player.guildId
-                  ? activeStyle
+                  ? "text-slate-50 bg-red-600"
                   : "bg-neutral-800 hover:bg-neutral-700 text-gray-300"
               }`}
             >
@@ -178,14 +182,16 @@ export default function Sidebar({
                   </span>
                 </div>
                 {player.playing && (
-                  <div className="flex space-x-1 flex-shrink-0">
-                    {[0, 200, 400].map((delay, i) => (
+                  <div className="flex space-x-1 mt-1 h-4 items-end">
+                    {[0, 0.2, 0.4].map((delay, i) => (
                       <div
                         key={i}
-                        className="w-1 h-3 bg-green-400 rounded animate-bar"
+                        className="w-1 bg-white rounded-sm animate-bar"
                         style={{
-                          animationDelay: `${delay}ms`,
+                          animationDelay: `${delay}s`,
                           animationDuration: "1s",
+                          animationIterationCount: "infinite",
+                          transformOrigin: "bottom", // critical for bottom growth
                         }}
                       />
                     ))}
@@ -193,7 +199,7 @@ export default function Sidebar({
                 )}
               </div>
               {player.current && (
-                <div className="mt-2 text-xs text-gray-400 truncate">
+                <div className="mt-2 text-xs text-gray-200 truncate">
                   {player.current.title}
                 </div>
               )}
@@ -213,20 +219,20 @@ export default function Sidebar({
 
       {/* Stats */}
       <div className="px-4 space-y-3 pb-4">
-        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide text-center">
           Statistics
         </h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 w-full">
           {stats.map((stat, index) => (
             <div key={index} className="bg-neutral-800 rounded-lg p-3">
               <div
-                className={`flex items-center space-x-2 ${
+                className={`flex flex-col items-center justify-center space-y-2 ${
                   stat.className || "text-gray-300"
                 }`}
               >
-                <div className="h-4 w-4">{stat.icon}</div>
-                <div>
-                  <p className="text-xs text-gray-400">{stat.label}</p>
+                <div className="text-xs text-gray-400">{stat.label}</div>
+                <div className="flex items-center justify-between w-full px-2 ">
+                  <div className="h-5 w-5 text-gray-300">{stat.icon}</div>
                   <p className="text-sm font-semibold">{stat.value}</p>
                 </div>
               </div>

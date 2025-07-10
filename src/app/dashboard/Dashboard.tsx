@@ -364,8 +364,8 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#030202] text-white">
       {/* Header */}
-      <header className="border-b h-20 border-stone-800 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <header className="border-b h-20 border-stone-800 px-6 flex items-center">
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center space-x-4 gap-4">
             <div
               className="hover:bg-neutral-800 rounded p-2 cursor-pointer border-neutral-800 border"
