@@ -9,6 +9,14 @@ import {
   EmbedBuilder,
 } from "discord.js";
 import type { KazagumoPlayer } from "kazagumo";
+import type { Client } from "discord.js";
+
+// Extend KazagumoPlayer to allow a custom message property and message/channel IDs
+interface KazagumoPlayerWithMessage extends KazagumoPlayer {
+  message?: Message;
+  messageId?: string;
+  messageChannelId?: string;
+}
 
 export const playerControlsCommand = new SlashCommandBuilder()
   .setName("player")
@@ -116,7 +124,6 @@ export async function handlePlayerControls(
       .setThumbnail(track.thumbnail || null)
       .setColor(0x00ff99);
   }
-
   let isPlaying = false;
   if (typeof player?.paused === "boolean") {
     isPlaying = !player.paused;
@@ -127,7 +134,7 @@ export async function handlePlayerControls(
     try {
       const { playerSettings } = await import("@/lib/playerSettings");
       const settings = playerSettings.get(player.guildId);
-      if (settings && settings.repeatMode) repeatMode = settings.repeatMode;
+      if (settings && settings.repeatMode) repeatMode = settings.repeatMode as "off" | "one" | "all";
     } catch {}
   }
   const rows = getPlayerControlsRows(isPlaying, repeatMode);
@@ -148,5 +155,41 @@ export async function handlePlayerControls(
 
   if (guildId) {
     lastControlsMessage.set(guildId, sentMsg);
+  }
+  // Assign the message and IDs to the player for later deletion
+  if (player) {
+    (player as KazagumoPlayerWithMessage).message = sentMsg;
+    (player as KazagumoPlayerWithMessage).messageId = sentMsg.id;
+    (player as KazagumoPlayerWithMessage).messageChannelId = sentMsg.channelId;
+  }
+}
+
+// Utility to delete the player controls message for a guild
+export async function deletePlayerControlsMessage(guildId: string, player?: KazagumoPlayer, client?: Client) {
+  // Delete from lastControlsMessage map
+  if (guildId && lastControlsMessage.has(guildId)) {
+    try {
+      await lastControlsMessage.get(guildId)!.delete();
+    } catch {}
+    lastControlsMessage.delete(guildId);
+  }
+  // Delete from player.message if present
+  const p = player as KazagumoPlayerWithMessage | undefined;
+  if (p && p.message) {
+    try {
+      await p.message.delete();
+    } catch {}
+    p.message = undefined;
+  } else if (p && p.messageId && p.messageChannelId && client) {
+    // Try to fetch and delete the message if not cached
+    try {
+      const channel = await client.channels.fetch(p.messageChannelId);
+      if (channel && 'messages' in channel) {
+        const msg = await channel.messages.fetch(p.messageId);
+        await msg.delete();
+      }
+    } catch {}
+    p.messageId = undefined;
+    p.messageChannelId = undefined;
   }
 }

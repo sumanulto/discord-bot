@@ -1,6 +1,11 @@
 // stop.ts
-import { ChatInputCommandInteraction } from "discord.js";
+import { ChatInputCommandInteraction, Message } from "discord.js";
 import { KazagumoPlayer } from "kazagumo";
+
+// Extend KazagumoPlayer to allow a custom message property
+interface KazagumoPlayerWithMessage extends KazagumoPlayer {
+  message?: Message;
+}
 
 export async function stopCommand(
   interaction: ChatInputCommandInteraction,
@@ -14,6 +19,15 @@ export async function stopCommand(
   }
 
   player.queue.clear();
+  // Attempt to delete the player message if it exists
+  const playerWithMessage = player as KazagumoPlayerWithMessage;
+  if (playerWithMessage.message) {
+    try {
+      await playerWithMessage.message.delete();
+    } catch {
+      // Ignore errors (e.g., message already deleted or missing permissions)
+    }
+  }
   player.destroy();
-  await interaction.reply("⏹️ Stopped playing and cleared the queue.");
+  await interaction.reply("⏹️ Stopped playing and cleared the queue. Player message deleted.");
 }
