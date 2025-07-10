@@ -364,7 +364,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[#030202] text-white">
       {/* Header */}
-      <header className="border-b max-h-20 border-stone-800 px-6 py-4">
+      <header className="border-b h-20 border-stone-800 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 gap-4">
             <div
