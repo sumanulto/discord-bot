@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Initialize settings if missing
-    const settings = playerSettings.get(guildId) ?? { shuffleEnabled: false, repeatMode: "off" }
+    const settings = playerSettings.get(guildId) ?? { shuffleEnabled: false, repeatMode: "off", volume: 100 }
     playerSettings.set(guildId, settings)
 
     // Helper to update Discord player controls
@@ -109,6 +109,8 @@ export async function POST(request: NextRequest) {
         const volume = Number.parseInt(query)
         if (volume >= 0 && volume <= 100) {
           player.setVolume(volume)
+          // Persist volume in playerSettings
+          playerSettings.set(guildId, { ...settings, volume })
           return NextResponse.json({ success: true, message: `Set volume to ${volume}%` })
         } else {
           return NextResponse.json({ error: "Volume must be between 0 and 100" }, { status: 400 })

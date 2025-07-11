@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@plugin "daisyui";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -206,12 +205,12 @@
 
 /* vertical bottom to top */
 .vertical-slider {
-  writing-mode: bt-lr; 
+  writing-mode: bt-lr;
   -webkit-appearance: slider-vertical;
   height: 100px;
-  width: 6px;
+  width: 14px;
   background: #de0c0c;
-  border-radius: 4px;
+  border-radius: 7px;
 }
 .vertical-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -220,7 +219,7 @@
   height: 14px;
   border-radius: 50%;
   cursor: pointer;
-  margin-left: -4px;
+  margin-left: 0;
 }
 .vertical-slider::-moz-range-thumb {
   background: #ef4444;

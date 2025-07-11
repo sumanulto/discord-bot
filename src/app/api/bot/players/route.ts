@@ -14,7 +14,7 @@ export async function GET() {
     const players = Array.from(kazagumo.players.values()).map((player) => {
       const current = player.queue.current
       const queue = player.queue; // Remove .slice(0, 10) to return all tracks
-      const settings = playerSettings.get(player.guildId) ?? { shuffleEnabled: false, repeatMode: "off" };
+      const settings = playerSettings.get(player.guildId) ?? { shuffleEnabled: false, repeatMode: "off", volume: 100 };
 
       return {
         guildId: player.guildId,
@@ -38,10 +38,14 @@ export async function GET() {
           title: track.title,
           author: track.author,
           duration: track.length || 0,
+          uri: track.uri,
+          thumbnail: track.thumbnail,
+          identifier: track.identifier,
         })),
         settings: {
           shuffleEnabled: settings.shuffleEnabled,
           repeatMode: settings.repeatMode,
+          volume: settings.volume ?? player.volume,
         },
       }
     })

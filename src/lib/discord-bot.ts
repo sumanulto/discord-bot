@@ -189,11 +189,14 @@ export class DiscordMusicBot {
         throw new Error("No text channel found in the guild.");
       }
 
+      // Use persistent volume if available
+      const { playerSettings } = await import("@/lib/playerSettings");
+      const settings = playerSettings.get(guild.id);
       player = await this.kazagumo.createPlayer({
         guildId: guild.id,
         textId: textChannel.id,
         voiceId: voiceChannel.id,
-        volume: 100,
+        volume: settings?.volume ?? 100,
         deaf: true,
       });
     }

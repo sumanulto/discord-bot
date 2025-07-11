@@ -83,10 +83,11 @@ export default function QueueSection({
                   }
                 >
                   <div className="w-14 h-10 relative rounded overflow-hidden flex items-center justify-center">
-                    <img
+                    <Image
                       src={track.thumbnail || "/placeholder.svg"}
                       alt={track.title}
-                      className="object-cover w-full h-full"
+                      fill
+                      className="object-cover"
                     />
                   </div>
 

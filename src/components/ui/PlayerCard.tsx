@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import {
   Play,
@@ -63,19 +63,55 @@ export default function PlayerCard({
   // New state for shuffle mode
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
 
+  // --- Volume sync state ---
+  const [localVolume, setLocalVolume] = useState<number | undefined>(undefined);
+
   const localProgressInterval = useRef<NodeJS.Timeout | null>(null);
   const hideVolumeSliderTimeout = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateTime = useRef<number | null>(null);
 
-  // Initialize shuffle from playerSettings or fetch on mount
+  // Initialize shuffle and volume from playerSettings or fetch on mount
   useEffect(() => {
-    // You might want to fetch these settings from your backend or context
-    // For example, from currentPlayer or an API call:
-    // Assuming currentPlayer.settings.shuffleEnabled and repeatMode are available:
     if (currentPlayer.settings) {
       setShuffleEnabled(currentPlayer.settings.shuffleEnabled ?? false);
+      // Always sync localVolume with backend value on change
+      if (typeof currentPlayer.settings.volume === "number") {
+        setLocalVolume(currentPlayer.settings.volume);
+      }
     }
-  }, [currentPlayer]);
+  }, [currentPlayer.settings]);
+  // Update parent volume state if localVolume changes (for backward compatibility)
+  useEffect(() => {
+    if (
+      typeof setVolume === "function" &&
+      typeof localVolume === "number" &&
+      localVolume !== volume
+    ) {
+      setVolume(localVolume);
+    }
+  }, [localVolume, setVolume, volume]);
+
+  // Function to update volume both locally and on backend
+  const handleVolumeChange = useCallback(
+    async (newVolume: number) => {
+      setLocalVolume(newVolume);
+      try {
+        await fetch("/api/bot/control", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "volume",
+            guildId: selectedGuild,
+            volume: newVolume,
+          }),
+        });
+        fetchPlayers(); // Optionally refresh state
+      } catch (err) {
+        console.error("Failed to set volume:", err);
+      }
+    },
+    [selectedGuild, fetchPlayers]
+  );
 
   const toggleShuffle = async () => {
     try {
@@ -555,10 +591,11 @@ export default function PlayerCard({
                       type="range"
                       min={0}
                       max={100}
-                      value={isMuted ? 0 : volume}
-                      onChange={(e) => {
+                      value={isMuted ? 0 : localVolume ?? 100}
+                      onChange={async (e) => {
                         primeMediaSession();
-                        setVolume(Number(e.target.value));
+                        const newVol = Number(e.target.value);
+                        await handleVolumeChange(newVol);
                       }}
                       className="vertical-slider"
                     />
