@@ -83,7 +83,11 @@ export default function PlayerCard({
       const response = await fetch("/api/bot/control", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "shuffle", guildId: selectedGuild, enabled }),
+        body: JSON.stringify({
+          action: "shuffle",
+          guildId: selectedGuild,
+          enabled,
+        }),
       });
       const data = await response.json();
       if (response.ok) {
@@ -107,7 +111,11 @@ export default function PlayerCard({
       const response = await fetch("/api/bot/control", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "repeat", guildId: selectedGuild, mode: newMode }),
+        body: JSON.stringify({
+          action: "repeat",
+          guildId: selectedGuild,
+          mode: newMode,
+        }),
       });
       const data = await response.json();
       if (response.ok) {
@@ -126,7 +134,11 @@ export default function PlayerCard({
       const response = await fetch("/api/bot/control", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "remove", guildId: selectedGuild, index }),
+        body: JSON.stringify({
+          action: "remove",
+          guildId: selectedGuild,
+          index,
+        }),
       });
       const data = await response.json();
       if (!response.ok) console.error(data.error || "Failed to remove track");
@@ -144,7 +156,11 @@ export default function PlayerCard({
       const response = await fetch("/api/bot/control", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "playNext", guildId: selectedGuild, index }),
+        body: JSON.stringify({
+          action: "playNext",
+          guildId: selectedGuild,
+          index,
+        }),
       });
       const data = await response.json();
       if (!response.ok) console.error(data.error || "Failed to move track");
@@ -171,7 +187,8 @@ export default function PlayerCard({
   };
 
   const showSlider = () => {
-    if (hideVolumeSliderTimeout.current) clearTimeout(hideVolumeSliderTimeout.current);
+    if (hideVolumeSliderTimeout.current)
+      clearTimeout(hideVolumeSliderTimeout.current);
     setShowVolumeSlider(true);
   };
 
@@ -197,16 +214,26 @@ export default function PlayerCard({
       return;
     }
     // Always sync to backend position if available
-    if (currentPlayer.position !== undefined && currentPlayer.position !== null) {
+    if (
+      currentPlayer.position !== undefined &&
+      currentPlayer.position !== null
+    ) {
       setLocalProgress(currentPlayer.position);
     }
     prevSelectedGuild.current = selectedGuild;
-  }, [currentPlayer.current?.uri, selectedGuild, currentPlayer.position, justSeeked, seekTarget]);
+  }, [
+    currentPlayer.current?.uri,
+    selectedGuild,
+    currentPlayer.position,
+    justSeeked,
+    seekTarget,
+  ]);
 
   useEffect(() => {
     if (justSeeked) return; // Don't sync from backend right after seeking
     if (currentPlayer.current && !currentPlayer.paused && !isSeekingTimeline) {
-      if (localProgressInterval.current) clearInterval(localProgressInterval.current);
+      if (localProgressInterval.current)
+        clearInterval(localProgressInterval.current);
       lastUpdateTime.current = performance.now();
       localProgressInterval.current = setInterval(() => {
         if (lastUpdateTime.current !== null) {
@@ -222,7 +249,8 @@ export default function PlayerCard({
       }, 10000);
 
       return () => {
-        if (localProgressInterval.current) clearInterval(localProgressInterval.current);
+        if (localProgressInterval.current)
+          clearInterval(localProgressInterval.current);
         clearInterval(syncInterval);
         localProgressInterval.current = null;
         lastUpdateTime.current = null;
@@ -240,7 +268,8 @@ export default function PlayerCard({
   // End justSeeked early if backend catches up
   useEffect(() => {
     if (justSeeked && seekTarget !== null) {
-      if (Math.abs(currentPlayer.position - seekTarget) < 1000) { // within 1s
+      if (Math.abs(currentPlayer.position - seekTarget) < 1000) {
+        // within 1s
         setJustSeeked(false);
         setSeekTarget(null);
       }
@@ -249,14 +278,18 @@ export default function PlayerCard({
 
   // Media Session API integration for browser media keys
   useEffect(() => {
-    if (typeof window === "undefined" || !('mediaSession' in navigator)) return;
+    if (typeof window === "undefined" || !("mediaSession" in navigator)) return;
     if (!currentPlayer.current) return;
 
     navigator.mediaSession.metadata = new window.MediaMetadata({
       title: currentPlayer.current.title,
       artist: currentPlayer.current.author,
       artwork: [
-        { src: currentPlayer.current.thumbnail || "/placeholder.svg", sizes: "300x300", type: "image/png" },
+        {
+          src: currentPlayer.current.thumbnail || "/placeholder.svg",
+          sizes: "300x300",
+          type: "image/png",
+        },
       ],
     });
 
@@ -276,7 +309,9 @@ export default function PlayerCard({
     });
 
     // Set playback state for better browser integration
-    navigator.mediaSession.playbackState = currentPlayer.paused ? "paused" : "playing";
+    navigator.mediaSession.playbackState = currentPlayer.paused
+      ? "paused"
+      : "playing";
 
     return () => {
       navigator.mediaSession.setActionHandler("play", null);
@@ -339,7 +374,8 @@ export default function PlayerCard({
   }
 
   // Use repeatMode from currentPlayer.settings
-  const repeatMode: "off" | "one" | "all" = currentPlayer.settings?.repeatMode ?? "off";
+  const repeatMode: "off" | "one" | "all" =
+    currentPlayer.settings?.repeatMode ?? "off";
 
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] w-full text-white">
@@ -381,8 +417,12 @@ export default function PlayerCard({
       <div className="border-t border-neutral-800 px-4 py-2">
         <div className="items-center space-x-3 w-full px-2">
           <div>
-            <h1 className="text-base font-bold">{currentPlayer.current.title}</h1>
-            <p className="text-sm text-gray-300">{currentPlayer.current.author}</p>
+            <h1 className="text-base font-bold">
+              {currentPlayer.current.title}
+            </h1>
+            <p className="text-sm text-gray-300">
+              {currentPlayer.current.author}
+            </p>
           </div>
 
           <input
@@ -415,7 +455,9 @@ export default function PlayerCard({
             style={{
               background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${
                 (localProgress / currentPlayer.current.duration) * 100
-              }%, #374151 ${(localProgress / currentPlayer.current.duration) * 100}%, #374151 100%)`,
+              }%, #374151 ${
+                (localProgress / currentPlayer.current.duration) * 100
+              }%, #374151 100%)`,
             }}
           />
 
@@ -436,7 +478,9 @@ export default function PlayerCard({
               <button
                 onClick={toggleShuffle}
                 className={`p-2 rounded-full transition-colors ${
-                  shuffleEnabled ? "bg-red-600 text-white" : "hover:bg-gray-800 text-gray-400"
+                  shuffleEnabled
+                    ? "bg-red-600 text-white"
+                    : "hover:bg-gray-800 text-gray-400"
                 }`}
                 title="Shuffle"
               >
@@ -449,7 +493,9 @@ export default function PlayerCard({
                 <SkipBack className="h-6 w-6" />
               </button>
               <button
-                onClick={() => handleControlPlayer(currentPlayer.paused ? "play" : "pause")}
+                onClick={() =>
+                  handleControlPlayer(currentPlayer.paused ? "play" : "pause")
+                }
                 disabled={loading}
                 className="p-4 bg-red-600 hover:bg-red-700 rounded-full transition-colors disabled:opacity-50"
               >
@@ -469,7 +515,9 @@ export default function PlayerCard({
               <button
                 onClick={toggleRepeat}
                 className={`p-2 rounded-full transition-colors ${
-                  repeatMode !== "off" ? "bg-red-600 text-white" : "hover:bg-gray-800 text-gray-400"
+                  repeatMode !== "off"
+                    ? "bg-red-600 text-white"
+                    : "hover:bg-gray-800 text-gray-400"
                 }`}
                 title={`Repeat: ${repeatMode}`}
               >
@@ -490,11 +538,19 @@ export default function PlayerCard({
                 onMouseEnter={showSlider}
                 onMouseLeave={hideSlider}
               >
-                <button onClick={toggleMute} className="p-2 hover:bg-gray-800 rounded-full">
-                  {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                <button
+                  onClick={toggleMute}
+                  className="p-2 hover:bg-gray-800 rounded-full"
+                >
+                  {isMuted ? (
+                    <VolumeX className="h-5 w-5" />
+                  ) : (
+                    <Volume2 className="h-5 w-5" />
+                  )}
                 </button>
+
                 {showVolumeSlider && (
-                  <div className="absolute right-0 bottom-full mb-2 bg-neutral-800 p-3 rounded-lg shadow-lg flex items-center space-x-2 z-10">
+                  <div className="absolute right-0 w-12 bottom-full mb-2 bg-neutral-800 p-3 rounded-md shadow-lg flex flex-col items-center space-y-2 z-10">
                     <input
                       type="range"
                       min={0}
@@ -504,14 +560,9 @@ export default function PlayerCard({
                         primeMediaSession();
                         setVolume(Number(e.target.value));
                       }}
-                      className="w-32 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                      style={{
-                        background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${
-                          isMuted ? 0 : volume
-                        }%, #374151 ${isMuted ? 0 : volume}%, #374151 100%)`,
-                      }}
+                      className="vertical-slider"
                     />
-                    <span className="text-sm text-gray-400 w-8 text-right">
+                    <span className="text-sm text-gray-400">
                       {isMuted ? 0 : volume}
                     </span>
                   </div>
@@ -523,7 +574,10 @@ export default function PlayerCard({
       </div>
 
       {dropdownOpen !== null && (
-        <div className="fixed inset-0 z-5" onClick={() => setDropdownOpen(null)} />
+        <div
+          className="fixed inset-0 z-5"
+          onClick={() => setDropdownOpen(null)}
+        />
       )}
     </div>
   );

@@ -55,18 +55,22 @@ export default function QueueSection({
       </div>
 
       {/* Content wrapper with scroll */}
-      <div className="flex-1 overflow-y-auto rounded-lg px-1">
+      <div className="flex-1 px-1">
         {isQueueActive === "Search" ? (
-          <div className="mb-4 sticky top-0 z-10  py-2">
-            <input
-              type="text"
-              placeholder="🔍 Search songs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-stone-300"
-            />
+          <div className="flex flex-col h-full px-1">
+            {/* Sticky Search Bar */}
+            <div className="sticky top-0 z-10 bg-[#030202] pb-2">
+              <input
+                type="text"
+                placeholder="🔍 Search songs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-neutral-800 border border-neutral-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-stone-300"
+              />
+            </div>
 
-            <div className="mt-4 space-y-2">
+            {/* Scrollable results container */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[450px]">
               {searchResults.map((track: any, index: number) => (
                 <div
                   key={index}
@@ -78,12 +82,11 @@ export default function QueueSection({
                     )
                   }
                 >
-                  <div className="max-w-14 max-h-10 relative rounded overflow-hidden flex items-center">
-                    {/* Use img for external URLs, or Image if you want optimization */}
+                  <div className="w-14 h-10 relative rounded overflow-hidden flex items-center justify-center">
                     <img
                       src={track.thumbnail || "/placeholder.svg"}
                       alt={track.title}
-                      className="object-cover items-center "
+                      className="object-cover w-full h-full"
                     />
                   </div>
 

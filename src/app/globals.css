@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "daisyui";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -203,3 +204,41 @@
 }
 
 
+/* vertical bottom to top */
+.vertical-slider {
+  writing-mode: bt-lr; 
+  -webkit-appearance: slider-vertical;
+  height: 100px;
+  width: 6px;
+  background: #de0c0c;
+  border-radius: 4px;
+}
+.vertical-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  background: #ef4444;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  margin-left: -4px;
+}
+.vertical-slider::-moz-range-thumb {
+  background: #ef4444;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+@keyframes spin-reverse {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg); /* reverse direction */
+  }
+}
+
+.animate-spin-reverse {
+  animation: spin-reverse 1s linear infinite;
+}
