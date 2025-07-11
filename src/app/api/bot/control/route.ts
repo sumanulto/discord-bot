@@ -50,7 +50,17 @@ export async function POST(request: NextRequest) {
       case "play":
         if (query) {
           try {
-            const track = await bot.searchAndPlay(guildId, query, { id: 'dashboard', username: 'Dashboard User' });
+            // Use the bot itself as the requester (GuildMember)
+            const client = bot.getClient();
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) {
+              return NextResponse.json({ error: "Guild not found" }, { status: 404 });
+            }
+            const botMember = guild.members.me;
+            if (!botMember) {
+              return NextResponse.json({ error: "Bot member not found in guild" }, { status: 404 });
+            }
+            const track = await bot.searchAndPlay(guildId, query, botMember);
             await updateDiscordPlayerControls();
             return NextResponse.json({
               success: true,

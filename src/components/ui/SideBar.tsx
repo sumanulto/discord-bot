@@ -6,8 +6,26 @@ import type { ReactNode } from "react";
 
 interface Player {
   guildId: string;
+  voiceChannel: string;
+  textChannel: string;
+  connected: boolean;
   playing: boolean;
-  current?: { title: string };
+  paused: boolean;
+  position: number;
+  volume: number;
+  current: {
+    title: string;
+    author: string;
+    duration: number;
+    uri: string;
+    thumbnail?: string;
+  } | null;
+  queue: Array<{
+    title: string;
+    author: string;
+    duration: number;
+    thumbnail?: string;
+  }>;
 }
 
 interface Stat {
