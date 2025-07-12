@@ -108,13 +108,15 @@ export default function Dashboard() {
       const data: Player[] = await response.json();
       setPlayers(data);
 
-      // Determine which selected guild ID to use:
-      // 1. If explicitly passed from a ref (for interval calls), use that.
-      // 2. Otherwise, use the component's state (for initial calls or direct triggers).
+      // Sync dashboard volume with actual player volume for selected guild
       const guildIdToUse =
         currentGuildIdFromRef !== undefined
           ? currentGuildIdFromRef
           : selectedGuild;
+      const currentPlayer = data.find((p) => p.guildId === guildIdToUse);
+      if (currentPlayer && typeof currentPlayer.volume === "number") {
+        setVolume(currentPlayer.volume);
+      }
 
       const currentSelectedGuildExists = data.some(
         (p) => p.guildId === guildIdToUse
@@ -229,7 +231,12 @@ export default function Dashboard() {
         setError(data.error || "Failed to control player");
       } else {
         setError("");
-        setTimeout(fetchPlayers, 500); // Calls fetchPlayers without an argument, using state's selectedGuild
+        if (action === "play") {
+          // For play (add song), update immediately for instant queue feedback
+          fetchPlayers();
+        } else {
+          setTimeout(fetchPlayers, 500); // For other actions, keep slight delay
+        }
       }
 
       // Specifically for seek action, update position immediately for smoother UI
@@ -331,11 +338,11 @@ export default function Dashboard() {
     {
       label: "Nodes",
       value: String(
-        botStatus?.nodes.filter((n: { connected: boolean }) => n.connected)
+        (botStatus?.nodes || []).filter((n: { connected: boolean }) => n.connected)
           .length || 0
       ),
       icon: <Cpu />,
-      className: botStatus?.nodes.some(
+      className: (botStatus?.nodes || []).some(
         (n: { connected: boolean }) => n.connected
       )
         ? "text-green-400"

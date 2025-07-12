@@ -1,41 +1,27 @@
-import { NextResponse } from "next/server"
-import { botManager } from "@/lib/bot-manager"
+import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    // Try to get or start the bot
-    const bot = await botManager.getBot()
-    const client = bot.getClient()
-    const kazagumo = bot.getKazagumo()
-
-    const isOnline = bot.isOnline()
-
-    const status = {
-      botOnline: isOnline,
-      guilds: client.guilds.cache.size,
-      users: client.users.cache.size,
-      players: kazagumo.players.size,
-      nodes: Array.from(kazagumo.shoukaku.nodes.values()).map((node) => ({
-        identifier: node.name,
-        connected: node.state === 2,
-        stats: node.stats || {},
-      })),
-    }
-
-    console.log("Bot status response:", status)
-    return NextResponse.json(status)
+    // Fetch status from the bot-status-server using env
+    const baseUrl = process.env.BOT_STATUS_SERVER_URL || "http://localhost:34567";
+    const endpoint = process.env.BOT_STATUS_SERVER_STATUS_ENDPOINT || "/status";
+    const statusRes = await fetch(`${baseUrl}${endpoint}`);
+    const statusJson = await statusRes.json();
+    return NextResponse.json({
+      botOnline: statusJson.online,
+      guilds: statusJson.guilds,
+      users: statusJson.users,
+      players: statusJson.players,
+      nodes: statusJson.nodes,
+    });
   } catch (error) {
-    console.error("Status endpoint error:", error)
+    console.error("Status endpoint error:", error);
     return NextResponse.json(
       {
         botOnline: false,
-        guilds: 0,
-        users: 0,
-        players: 0,
-        nodes: [],
         error: error instanceof Error ? error.message : "Failed to get bot status",
       },
-      { status: 200 }, // Return 200 to avoid dashboard errors
-    )
+      { status: 200 },
+    );
   }
 }

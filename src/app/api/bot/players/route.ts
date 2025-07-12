@@ -1,59 +1,28 @@
-import { NextResponse } from "next/server"
-import { botManager } from "@/lib/bot-manager"
-import { playerSettings } from "@/lib/playerSettings"
+
+import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    if (!botManager.hasBot()) {
-      return NextResponse.json([])
+    const baseUrl = process.env.BOT_STATUS_SERVER_URL || "http://localhost:34567";
+    const endpoint = process.env.BOT_STATUS_SERVER_PLAYERS_ENDPOINT || "/players";
+    const res = await fetch(`${baseUrl}${endpoint}`);
+    if (!res.ok) {
+      return NextResponse.json([]);
     }
-
-    const bot = botManager.getBotSync()!
-    const kazagumo = bot.getKazagumo()
-
-    const players = Array.from(kazagumo.players.values()).map((player) => {
-      const current = player.queue.current
-      const queue = player.queue; // Remove .slice(0, 10) to return all tracks
-      const settings = playerSettings.get(player.guildId) ?? { shuffleEnabled: false, repeatMode: "off", volume: 100 };
-
-      return {
-        guildId: player.guildId,
-        voiceChannel: player.voiceId,
-        textChannel: player.textId,
-        connected: !!player.voiceId, // More robust: true if bot is in a voice channel
-        playing: player.playing,
-        paused: player.paused,
-        position: player.shoukaku.position || 0,
-        volume: player.volume,
-        current: current
-          ? {
-              title: current.title,
-              author: current.author,
-              duration: current.length || 0,
-              uri: current.uri,
-              thumbnail: current.thumbnail,
-            }
-          : null,
-        queue: queue.map((track) => ({
-          title: track.title,
-          author: track.author,
-          duration: track.length || 0,
-          uri: track.uri,
-          thumbnail: track.thumbnail,
-          identifier: track.identifier,
-        })),
-        settings: {
-          shuffleEnabled: settings.shuffleEnabled,
-          repeatMode: settings.repeatMode,
-          volume: settings.volume ?? player.volume,
-        },
-      }
-    })
-
-    console.log(`Found ${players.length} active players`)
-    return NextResponse.json(players)
+    const text = await res.text();
+    if (!text) {
+      return NextResponse.json([]);
+    }
+    let players = [];
+    try {
+      players = JSON.parse(text);
+    } catch (err) {
+      console.error("Failed to parse players JSON:", err);
+      return NextResponse.json([]);
+    }
+    return NextResponse.json(players);
   } catch (error) {
-    console.error("Players endpoint error:", error)
-    return NextResponse.json([])
+    console.error("Players endpoint error:", error);
+    return NextResponse.json([]);
   }
 }

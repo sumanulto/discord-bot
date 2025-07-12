@@ -1,3 +1,4 @@
+import type { Guild } from "discord.js";
 // src/lib/discord-bot.ts
 
 import "dotenv/config";
@@ -38,6 +39,12 @@ import { buttonVolumeUp } from "@/lib/buttons/buttonVolumeUp";
 import { buttonVolumeDown } from "@/lib/buttons/buttonVolumeDown";
 
 export class DiscordMusicBot {
+  /**
+   * Returns a Guild object by ID, or undefined if not found.
+   */
+  getGuild(guildId: string): Guild | undefined {
+    return this.client.guilds.cache.get(guildId);
+  }
   private client: Client;
   private kazagumo: Kazagumo;
   private rest: REST;

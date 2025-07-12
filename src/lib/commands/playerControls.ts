@@ -119,6 +119,7 @@ export async function handlePlayerControls(
         { name: "Author", value: track.author || "Unknown", inline: true },
         { name: "Requested by", value: requesterMention, inline: true },
         { name: "Duration", value: formatTime(track.length), inline: true },
+        { name: "Volume", value: `${player.volume ?? 100}%`, inline: true },
         { name: "\u200B", value: `Queue Length ${player.queue.size} Tracks` }
       )
       .setThumbnail(track.thumbnail || null)

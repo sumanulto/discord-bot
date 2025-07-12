@@ -1,24 +1,20 @@
 import { NextResponse } from "next/server"
-import { botManager } from "@/lib/bot-manager"
+import { getBotInstance } from "@/lib/bot-manager"
 
 export async function POST() {
   try {
-    const bot = botManager.getBotSync()
-
-    if (bot) {
-      // Disconnect all players
-      const kazagumo = bot.getKazagumo()
-      for (const player of kazagumo.players.values()) {
-        player.destroy()
-      }
-
-      // Disconnect the client
-      bot.getClient().destroy()
-
-      // Clear the bot instance
-      botManager.clearBot()
+    const bot = getBotInstance()
+    if (!bot) {
+      return NextResponse.json({ error: "Bot is not running" }, { status: 503 })
     }
-
+    // Disconnect all players
+    const kazagumo = bot.getKazagumo()
+    for (const player of kazagumo.players.values()) {
+      player.destroy()
+    }
+    // Disconnect the client
+    bot.getClient().destroy()
+    // Optionally, you could clear the bot instance here if you add a clearBotInstance function to bot-manager
     return NextResponse.json({
       success: true,
       message: "Bot stopped successfully",
