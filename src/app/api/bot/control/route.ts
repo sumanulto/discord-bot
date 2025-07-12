@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       case "play":
         if (query) {
           try {
-            const track = await bot.searchAndPlay(guildId, query, { id: 'dashboard', username: 'Dashboard User' });
+            const track = await bot.searchAndPlay(guildId, query, { id: 'dashboard', user: { id: 'dashboard', username: 'Dashboard User' } as any } as any);
             await updateDiscordPlayerControls();
             return NextResponse.json({
               success: true,

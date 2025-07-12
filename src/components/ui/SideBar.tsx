@@ -1,14 +1,10 @@
 "use client";
 
-import { Music2, Server, Settings, Cpu, Users } from "lucide-react";
+import { Music2, Server, Settings } from "lucide-react";
 
 import type { ReactNode } from "react";
 
-interface Player {
-  guildId: string;
-  playing: boolean;
-  current?: { title: string };
-}
+import type { Player } from "@/types/player";
 
 interface Stat {
   icon: ReactNode;

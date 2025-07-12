@@ -19,7 +19,6 @@ import {
   BadgeCheck,
   BadgeX,
   Triangle,
-  Terminal,
 } from "lucide-react";
 import {
   Dialog,
@@ -28,6 +27,7 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
+import type { Player } from "@/types/player";
 
 interface BotStatus {
   botOnline: boolean;
@@ -41,29 +41,7 @@ interface BotStatus {
   }>;
 }
 
-interface Player {
-  guildId: string;
-  voiceChannel: string;
-  textChannel: string;
-  connected: boolean;
-  playing: boolean;
-  paused: boolean;
-  position: number;
-  volume: number;
-  current: {
-    title: string;
-    author: string;
-    duration: number;
-    uri: string;
-    thumbnail?: string;
-  } | null;
-  queue: Array<{
-    title: string;
-    author: string;
-    duration: number;
-    thumbnail?: string;
-  }>;
-}
+
 
 export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -274,7 +252,7 @@ export default function Dashboard() {
   };
 
   const seekToPosition = async (percentage: number) => {
-    if (!currentPlayer?.current) return;
+    if (!currentPlayer?.current || typeof currentPlayer.current.duration !== "number") return;
 
     const newPosition = Math.floor(
       (percentage / 100) * currentPlayer.current.duration
@@ -519,6 +497,7 @@ export default function Dashboard() {
                 formatTime={formatTime}
                 loading={loading}
                 setIsSeekingTimeline={setIsSeekingTimeline}
+                isSeekingTimeline={isSeekingTimeline}
                 selectedGuild={selectedGuild}
                 fetchPlayers={fetchPlayers}
               />
