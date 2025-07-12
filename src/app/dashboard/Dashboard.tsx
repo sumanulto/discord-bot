@@ -19,6 +19,7 @@ import {
   BadgeCheck,
   BadgeX,
   Triangle,
+  Terminal,
 } from "lucide-react";
 import {
   Dialog,
@@ -36,7 +37,7 @@ interface BotStatus {
   nodes: Array<{
     identifier: string;
     connected: boolean;
-    stats: Record<string, unknown>;
+    stats: any;
   }>;
 }
 
@@ -176,8 +177,8 @@ export default function Dashboard() {
         console.log("Retaining selectedGuild:", guildIdToUse);
       }
       console.log("--- End fetchPlayers Debug ---");
-    } catch {
-      console.error("Failed to fetch players:");
+    } catch (error) {
+      console.error("Failed to fetch players:", error);
     }
   };
 
@@ -520,7 +521,6 @@ export default function Dashboard() {
                 setIsSeekingTimeline={setIsSeekingTimeline}
                 selectedGuild={selectedGuild}
                 fetchPlayers={fetchPlayers}
-                isSeekingTimeline={isSeekingTimeline}
               />
             </div>
           )}
