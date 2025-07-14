@@ -106,7 +106,7 @@ export default function QueueSection({
         ) : (
           <>
             {currentPlayer?.queue.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-2 overflow-y-auto pr-1 max-h-[450px]">
                 {currentPlayer.queue.map((track: any, index: number) => {
                   const thumbnail =
                     track.thumbnail && track.thumbnail.startsWith("http")

@@ -42,6 +42,7 @@ export function getPlayerControlsRows(
   let repeatEmoji = "➡️";
   if (repeatMode === "one") repeatEmoji = "🔂";
   else if (repeatMode === "all") repeatEmoji = "🔁";
+  else if (repeatMode === "off") repeatEmoji = "➡️";
   return [
     new ActionRowBuilder<ButtonBuilder>().addComponents(
       new ButtonBuilder()
@@ -130,12 +131,23 @@ export async function handlePlayerControls(
     isPlaying = !player.paused;
   }
   let repeatMode: "off" | "one" | "all" = "off";
-  if (player && player.guildId) {
-    // Try to get repeatMode from playerSettings if available
+  if (player && typeof player.loop === "string") {
+    // Use the current player.loop for instant UI update
+    if (player.loop === "queue") repeatMode = "all";
+    else if (player.loop === "track") repeatMode = "one";
+    else if (player.loop === "none") repeatMode = "off";
+  } else if (player && player.guildId) {
+    // Fallback to playerSettings if player.loop is not available
     try {
       const { playerSettings } = await import("@/lib/playerSettings");
       const settings = playerSettings.get(player.guildId);
-      if (settings && settings.repeatMode) repeatMode = settings.repeatMode as "off" | "one" | "all";
+      if (settings && settings.repeatMode) {
+        const mode = String(settings.repeatMode);
+        if (mode === "queue") repeatMode = "all";
+        else if (mode === "track") repeatMode = "one";
+        else if (mode === "none") repeatMode = "off";
+        else repeatMode = mode as "off" | "one" | "all";
+      }
     } catch {}
   }
   const rows = getPlayerControlsRows(isPlaying, repeatMode);

@@ -39,9 +39,6 @@ import { buttonVolumeUp } from "@/lib/buttons/buttonVolumeUp";
 import { buttonVolumeDown } from "@/lib/buttons/buttonVolumeDown";
 
 export class DiscordMusicBot {
-  /**
-   * Returns a Guild object by ID, or undefined if not found.
-   */
   getGuild(guildId: string): Guild | undefined {
     return this.client.guilds.cache.get(guildId);
   }
@@ -90,6 +87,32 @@ export class DiscordMusicBot {
     this.client.once("ready", () => {
       this.isReady = true;
       console.log(`✅ Logged in as ${this.client.user?.tag}`);
+      // Set up auto-cycling statuses
+      const status = process.env.BOT_STATUS || "online";
+      const message1 = process.env.BOT_STATUS_MESSAGE_1 || "Listening to your commands!";
+      const message2 = process.env.BOT_STATUS_MESSAGE_2 || "Ready to play music!";
+      const message3 = process.env.BOT_STATUS_MESSAGE_3 || "Type /play to start music!";
+      const message4 = process.env.BOT_STATUS_MESSAGE_4 || "Invite me to your server!";
+      const activities = [
+        { name: message1, type: 4 },
+        { name: message2, type: 4 },
+        { name: message3, type: 4 },
+        { name: message4, type: 4 },
+      ];
+      let activityIndex = 0;
+      // Set initial presence
+      this.client.user?.setPresence({
+        status: status as "online" | "idle" | "dnd" | "invisible",
+        activities: [activities[activityIndex]],
+      });
+      // Cycle every 30 seconds
+      setInterval(() => {
+        activityIndex = (activityIndex + 1) % activities.length;
+        this.client.user?.setPresence({
+          status: status as "online" | "idle" | "dnd" | "invisible",
+          activities: [activities[activityIndex]],
+        });
+      }, 4000);
     });
 
     this.client.on("interactionCreate", async (interaction) => {

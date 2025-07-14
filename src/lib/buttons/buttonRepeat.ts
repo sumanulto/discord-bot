@@ -15,22 +15,23 @@ export async function buttonRepeat(interaction: ButtonInteraction, kazagumo: Kaz
     return;
   }
   let newLoop: "none" | "track" | "queue";
-  let newRepeatMode: "off" | "one" | "all" = "off";
   if (player.loop === "none") {
     newLoop = "track";
-    newRepeatMode = "one";
   } else if (player.loop === "track") {
     newLoop = "queue";
-    newRepeatMode = "all";
   } else {
     newLoop = "none";
-    newRepeatMode = "off";
   }
   player.setLoop(newLoop);
-  // Update playerSettings for web UI sync
+  // Update playerSettings for web UI sync (always use Kazagumo's values)
+  // Map to UI value for playerSettings
+  let uiRepeat: "off" | "one" | "all" = "off";
+  if (newLoop === "track") uiRepeat = "one";
+  else if (newLoop === "queue") uiRepeat = "all";
+  else uiRepeat = "off";
   playerSettings.set(guild.id, {
     ...(playerSettings.get(guild.id) || { shuffleEnabled: false, repeatMode: "off" }),
-    repeatMode: newRepeatMode,
+    repeatMode: uiRepeat,
   });
   // Update Discord controls embed/buttons using a fake ChatInputCommandInteraction
   const textChannel = interaction.channel && 'send' in interaction.channel ? interaction.channel : null;
@@ -40,11 +41,11 @@ export async function buttonRepeat(interaction: ButtonInteraction, kazagumo: Kaz
       channel: textChannel,
       replied: false,
       deferred: false,
-      reply: (options: any) => textChannel.send(options),
-      followUp: (options: any) => textChannel.send(options),
+      reply: (options: string | import("discord.js").MessagePayload | import("discord.js").MessageCreateOptions) => textChannel.send(options),
+      followUp: (options: string | import("discord.js").MessagePayload | import("discord.js").MessageCreateOptions) => textChannel.send(options),
     };
-    await handlePlayerControls(fakeInteraction as any, player);
+    await handlePlayerControls(fakeInteraction as unknown as import("discord.js").ChatInputCommandInteraction, player);
   }
-  const msg = await interaction.reply({ content: `Repeat mode is now set to: ${newLoop}.` });
+  const msg = await interaction.reply({ content: `Repeat mode is now set to: ${uiRepeat}.` });
   setTimeout(() => msg.delete().catch(() => {}), MSGDEL_DELAY);
 }
