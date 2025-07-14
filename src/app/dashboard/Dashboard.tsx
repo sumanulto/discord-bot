@@ -267,8 +267,8 @@ export default function Dashboard() {
     await controlPlayer("seek", newPosition.toString());
   };
 
+  // Only update local volume after backend confirms, to avoid race conditions
   const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
     controlPlayer("volume", newVolume.toString());
   };
 
@@ -280,6 +280,8 @@ export default function Dashboard() {
       setIsMuted(true);
       controlPlayer("volume", "0");
     }
+    // Always fetch latest state after mute toggle
+    setTimeout(fetchPlayers, 300);
   };
 
   const formatTime = (ms: number) => {
@@ -290,11 +292,13 @@ export default function Dashboard() {
   };
 
   const getServerName = (guildId: string) => {
-    const serverNames = {
-      [process.env.NEXT_PUBLIC_SERVER_1_ID || ""]: "Kraftamine",
-      [process.env.NEXT_PUBLIC_SERVER_2_ID || ""]: "PP'S Server",
-      [process.env.NEXT_PUBLIC_SERVER_3_ID || ""]: "Music Server",
-    };
+    const serverNames: Record<string, string> = {};
+    if (process.env.NEXT_PUBLIC_SERVER_1_ID && process.env.NEXT_PUBLIC_SERVER_1_NAME)
+      serverNames[process.env.NEXT_PUBLIC_SERVER_1_ID] = process.env.NEXT_PUBLIC_SERVER_1_NAME;
+    if (process.env.NEXT_PUBLIC_SERVER_2_ID && process.env.NEXT_PUBLIC_SERVER_2_NAME)
+      serverNames[process.env.NEXT_PUBLIC_SERVER_2_ID] = process.env.NEXT_PUBLIC_SERVER_2_NAME;
+    if (process.env.NEXT_PUBLIC_SERVER_3_ID && process.env.NEXT_PUBLIC_SERVER_3_NAME)
+      serverNames[process.env.NEXT_PUBLIC_SERVER_3_ID] = process.env.NEXT_PUBLIC_SERVER_3_NAME;
     return serverNames[guildId] || `Server ${guildId.slice(-4)}`;
   };
 

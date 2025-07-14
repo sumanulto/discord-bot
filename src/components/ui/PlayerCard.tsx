@@ -70,31 +70,26 @@ export default function PlayerCard({
   const hideVolumeSliderTimeout = useRef<NodeJS.Timeout | null>(null);
   const lastUpdateTime = useRef<number | null>(null);
 
-  // Initialize shuffle and volume from playerSettings or fetch on mount
+  // Only update local volume from backend when currentPlayer changes
   useEffect(() => {
     if (currentPlayer.settings) {
       setShuffleEnabled(currentPlayer.settings.shuffleEnabled ?? false);
-      // Always sync localVolume with backend value on change
       if (typeof currentPlayer.settings.volume === "number") {
         setLocalVolume(currentPlayer.settings.volume);
       }
     }
-  }, [currentPlayer.settings]);
-  // Update parent volume state if localVolume changes (for backward compatibility)
-  useEffect(() => {
-    if (
-      typeof setVolume === "function" &&
-      typeof localVolume === "number" &&
-      localVolume !== volume
-    ) {
-      setVolume(localVolume);
+    if (typeof currentPlayer.volume === "number") {
+      setLocalVolume(currentPlayer.volume);
     }
-  }, [localVolume, setVolume, volume]);
+  }, [currentPlayer.settings, currentPlayer.volume]);
 
-  // Function to update volume both locally and on backend
-  const handleVolumeChange = useCallback(
+  // Debounced volume update
+  const volumeUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
+  const lastVolumeSent = useRef<number | undefined>(undefined);
+
+  const sendVolumeToBackend = useCallback(
     async (newVolume: number) => {
-      setLocalVolume(newVolume);
+      lastVolumeSent.current = newVolume;
       try {
         await fetch("/api/bot/control", {
           method: "POST",
@@ -102,16 +97,26 @@ export default function PlayerCard({
           body: JSON.stringify({
             action: "volume",
             guildId: selectedGuild,
-            volume: newVolume,
+            query: newVolume.toString(),
           }),
         });
-        fetchPlayers(); // Optionally refresh state
+        setTimeout(fetchPlayers, 500);
       } catch (err) {
         console.error("Failed to set volume:", err);
       }
     },
     [selectedGuild, fetchPlayers]
   );
+
+  const handleVolumeChange = (newVolume: number) => {
+    setLocalVolume(newVolume);
+    if (volumeUpdateTimeout.current) {
+      clearTimeout(volumeUpdateTimeout.current);
+    }
+    volumeUpdateTimeout.current = setTimeout(() => {
+      sendVolumeToBackend(newVolume);
+    }, 300);
+  };
 
   const toggleShuffle = async () => {
     try {
@@ -592,10 +597,10 @@ export default function PlayerCard({
                       min={0}
                       max={100}
                       value={isMuted ? 0 : localVolume ?? 100}
-                      onChange={async (e) => {
+                      onChange={(e) => {
                         primeMediaSession();
                         const newVol = Number(e.target.value);
-                        await handleVolumeChange(newVol);
+                        handleVolumeChange(newVol);
                       }}
                       className="vertical-slider"
                     />

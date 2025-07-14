@@ -1,11 +1,12 @@
 // Utility to update the Discord player controls message from dashboard actions
-import { handlePlayerControls } from "../src/lib/commands/playerControls";
+import { handlePlayerControls, deletePlayerControlsMessage } from "../src/lib/commands/playerControls";
 import type { KazagumoPlayer } from "kazagumo";
 
 /**
  * Updates the Discord player controls message for a given player/guild.
  * This creates a synthetic interaction object with just enough info for handlePlayerControls.
  */
+// Only call this function from real control actions (not on every fetch)
 export async function updateDiscordPlayerMessage(bot: any, player: KazagumoPlayer) {
   if (!player || !player.guildId) return;
   const guild = bot.getGuild(player.guildId);
@@ -20,6 +21,11 @@ export async function updateDiscordPlayerMessage(bot: any, player: KazagumoPlaye
     channel = guild.channels.cache.find((c: any) => c.type === 0);
   }
   if (!channel || !('send' in channel)) return;
+
+  // Delete previous controls message for this guild (prevents duplicate embeds)
+  try {
+    await deletePlayerControlsMessage(player.guildId, player, bot);
+  } catch {}
 
   // Create a fake interaction with just enough for handlePlayerControls
   const fakeInteraction = {
